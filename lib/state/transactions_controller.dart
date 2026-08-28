@@ -1,0 +1,54 @@
+import 'package:signals_flutter/signals_flutter.dart';
+import '../data/repositories/transaction_repository.dart';
+import '../models/transaction_model.dart';
+
+class TransactionsController {
+  TransactionsController(this._repo);
+  final TransactionRepository _repo;
+
+  final Signal<List<TransactionModel>> transactions = signal(
+    <TransactionModel>[],
+  );
+  final Signal<bool> isLoading = signal(false);
+
+  Future<void> load() async {
+    isLoading.value = true;
+    transactions.value = await _repo.getAll();
+    isLoading.value = false;
+  }
+
+  Future<int> add(TransactionModel t) async {
+    final id = await _repo.insert(t);
+    await load();
+    return id;
+  }
+
+  Future<void> remove(int id) async {
+    await _repo.delete(id);
+    await load();
+  }
+
+  /// Sync suggestions for Autocomplete (filters in-memory, ordered by recency).
+  /// Covers empty query so recent payees show immediately.
+  List<String> payeeSuggestions(String query) {
+    final q = query.trim().toLowerCase();
+    final seen = <String>{};
+    final out = <String>[];
+    // transactions is ordered by date DESC from getAll()
+    for (final t in transactions.value) {
+      final p = t.payee?.trim();
+      if (p == null || p.isEmpty) continue;
+      final lower = p.toLowerCase();
+      if (!seen.add(lower)) continue;
+      if (q.isEmpty || lower.contains(q)) {
+        out.add(p);
+        if (out.length >= 20) break;
+      }
+    }
+    return out;
+  }
+
+  /// Async fallback when you need DB-level suggestions (e.g. before load).
+  Future<List<String>> payeeSuggestionsAsync({String? query, int limit = 20}) =>
+      _repo.getPayeeSuggestions(query: query, limit: limit);
+}
