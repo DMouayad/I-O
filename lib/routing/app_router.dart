@@ -1,9 +1,8 @@
 import 'package:go_router/go_router.dart';
 import 'package:io/core/motion.dart';
-import '../features/add_transaction/add_transaction_screen.dart';
 import '../features/auth/auth_gate_screen.dart';
+import '../features/day/day_screen.dart';
 import '../features/home/home_shell_screen.dart';
-import '../models/transaction_model.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -11,14 +10,13 @@ final appRouter = GoRouter(
     GoRoute(path: '/', builder: (_, _) => const AuthGateScreen()),
     GoRoute(path: '/home', builder: (_, _) => const HomeShellScreen()),
     GoRoute(
-      path: '/add',
+      path: '/day/:isoDate',
       pageBuilder: (context, state) {
-        final typeParam = state.uri.queryParameters['type'];
-        final type = typeParam == 'income'
-            ? TransactionType.income
-            : TransactionType.expense;
-
-        return boxyPage(child: AddTransactionScreen(type: type));
+        final iso = state.pathParameters['isoDate']!;
+        final day = DateTime.parse(iso);
+        return boxyPage(
+          child: DayScreen(day: DateTime(day.year, day.month, day.day)),
+        );
       },
     ),
   ],

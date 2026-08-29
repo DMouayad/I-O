@@ -35,8 +35,6 @@ class AuthController {
       debugPrint(
         '[AuthController] LocalAuthException code=${e.code.name} desc=${e.description} details=${e.details}',
       );
-      // Redmi 7A (API 29, no fingerprint sensor) throws noBiometricHardware even
-      // though biometricOnly:false should allow DEVICE_CREDENTIAL (PIN). On this
       // OEM/BiometricPrompt compat path the check fails while isDeviceSupported
       // is true because a PIN is set → treat as device-secure pass (option A).
       if (e.code == LocalAuthExceptionCode.noBiometricHardware ||

@@ -12,9 +12,7 @@ class TransactionModel {
   final TransactionType type;
   final double amount;
   final String currency;
-  final String? category;
   final String? payee;
-  final String? note;
   final DateTime date;
   final DateTime createdAt;
 
@@ -23,9 +21,7 @@ class TransactionModel {
     required this.type,
     required this.amount,
     required this.currency,
-    this.category,
     this.payee,
-    this.note,
     required this.date,
     required this.createdAt,
   });
@@ -35,10 +31,7 @@ class TransactionModel {
     TransactionType? type,
     double? amount,
     String? currency,
-    String? category,
-    bool clearCategory = false,
     String? payee,
-    String? note,
     DateTime? date,
     DateTime? createdAt,
   }) {
@@ -47,9 +40,7 @@ class TransactionModel {
       type: type ?? this.type,
       amount: amount ?? this.amount,
       currency: currency ?? this.currency,
-      category: clearCategory ? null : (category ?? this.category),
       payee: payee ?? this.payee,
-      note: note ?? this.note,
       date: date ?? this.date,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -60,9 +51,7 @@ class TransactionModel {
     'type': type.value,
     'amount': amount,
     'currency': currency,
-    'category': category,
     'payee': payee,
-    'note': note,
     'date': date.millisecondsSinceEpoch,
     'created_at': createdAt.millisecondsSinceEpoch,
   };
@@ -73,9 +62,7 @@ class TransactionModel {
       type: TransactionTypeX.fromValue(map['type'] as String),
       amount: (map['amount'] as num).toDouble(),
       currency: map['currency'] as String,
-      category: map['category'] as String?,
       payee: map['payee'] as String?,
-      note: map['note'] as String?,
       date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
     );

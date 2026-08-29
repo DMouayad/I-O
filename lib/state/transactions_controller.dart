@@ -28,6 +28,11 @@ class TransactionsController {
     await load();
   }
 
+  Future<void> update(TransactionModel t) async {
+    await _repo.update(t);
+    await load();
+  }
+
   /// Sync suggestions for Autocomplete (filters in-memory, ordered by recency).
   /// Covers empty query so recent payees show immediately.
   List<String> payeeSuggestions(String query) {

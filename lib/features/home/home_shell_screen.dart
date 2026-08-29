@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
-import '../add/add_choice_screen.dart';
+import '../journal/journal_screen.dart';
 import '../reports/reports_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -14,7 +14,7 @@ class HomeShellScreen extends StatefulWidget {
 class _HomeShellScreenState extends State<HomeShellScreen> {
   int _index = 1;
 
-  final _pages = const [ReportsScreen(), AddChoiceScreen(), SettingsScreen()];
+  final _pages = const [ReportsScreen(), JournalScreen(), SettingsScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +31,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             label: l10n.reports,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.add_circle_outline_rounded),
-            selectedIcon: const Icon(Icons.add_circle_rounded),
+            icon: const Icon(Icons.add_home_outlined),
+            selectedIcon: const Icon(Icons.add_home_rounded),
             label: l10n.add,
           ),
           NavigationDestination(

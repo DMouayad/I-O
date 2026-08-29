@@ -33,12 +33,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addExpense => 'Add Expense';
 
   @override
-  String get category => 'Category';
-
-  @override
-  String get noteOptional => 'Note (optional)';
-
-  @override
   String get payeeOptional => 'Payee (optional)';
 
   @override
@@ -99,42 +93,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get all => 'All';
 
   @override
-  String get categorySales => 'Sales';
-
-  @override
-  String get categoryServices => 'Services';
-
-  @override
-  String get categoryOtherIncome => 'Other Income';
-
-  @override
-  String get categoryRent => 'Rent';
-
-  @override
-  String get categoryPackaging => 'Packaging';
-
-  @override
-  String get categoryUtilities => 'Utilities';
-
-  @override
-  String get categorySupplies => 'Supplies';
-
-  @override
-  String get categorySalaries => 'Salaries';
-
-  @override
-  String get categoryMarketing => 'Marketing';
-
-  @override
-  String get categoryTransport => 'Transport';
-
-  @override
-  String get categoryOtherExpense => 'Other Expense';
-
-  @override
-  String get uncategorized => 'Uncategorized';
-
-  @override
   String savedWithAmount(String amount) {
     return 'Saved $amount';
   }
@@ -150,4 +108,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteConfirmMessage => 'This action cannot be undone.';
+
+  @override
+  String get selectDate => 'Select date';
+
+  @override
+  String deletedWithAmount(String amount) {
+    return 'Deleted $amount';
+  }
+
+  @override
+  String get editTransaction => 'Edit transaction';
+
+  @override
+  String get journal => 'Journal';
+
+  @override
+  String get topPayees => 'Top payees';
 }

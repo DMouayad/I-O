@@ -33,12 +33,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addExpense => 'إضافة مصروف';
 
   @override
-  String get category => 'الفئة';
-
-  @override
-  String get noteOptional => 'ملاحظة (اختياري)';
-
-  @override
   String get payeeOptional => 'الجهة (اختياري)';
 
   @override
@@ -99,42 +93,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get all => 'الكل';
 
   @override
-  String get categorySales => 'مبيعات';
-
-  @override
-  String get categoryServices => 'خدمات';
-
-  @override
-  String get categoryOtherIncome => 'دخل آخر';
-
-  @override
-  String get categoryRent => 'إيجار';
-
-  @override
-  String get categoryPackaging => 'تغليف';
-
-  @override
-  String get categoryUtilities => 'فواتير';
-
-  @override
-  String get categorySupplies => 'مستلزمات';
-
-  @override
-  String get categorySalaries => 'رواتب';
-
-  @override
-  String get categoryMarketing => 'تسويق';
-
-  @override
-  String get categoryTransport => 'نقل';
-
-  @override
-  String get categoryOtherExpense => 'مصروف آخر';
-
-  @override
-  String get uncategorized => 'غير مصنّف';
-
-  @override
   String savedWithAmount(String amount) {
     return 'تم الحفظ $amount';
   }
@@ -150,4 +108,21 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deleteConfirmMessage => 'لا يمكن التراجع عن هذا الإجراء.';
+
+  @override
+  String get selectDate => 'اختيار التاريخ';
+
+  @override
+  String deletedWithAmount(String amount) {
+    return 'تم حذف $amount';
+  }
+
+  @override
+  String get editTransaction => 'تعديل المعاملة';
+
+  @override
+  String get journal => 'Journal';
+
+  @override
+  String get topPayees => 'أكبر الجهات';
 }

@@ -1,335 +1,299 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:io/core/theme/app_theme.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../core/motion.dart';
+import '../../core/theme/app_theme.dart';
 import '../../di.dart' as di;
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/transaction_model.dart';
-import '../../state/reports_controller.dart';
-import 'transaction_tile.dart';
 
-class ReportsScreen extends StatelessWidget {
-  const ReportsScreen({super.key, this.controller});
-  final ReportsController? controller;
+/// Reports — monthly aggregate: totals per currency + top payees.
+/// Read-only; browsing and deleting live in Journal / the day screen.
+class ReportsScreen extends StatefulWidget {
+  const ReportsScreen({super.key});
 
-  ReportsController get _c => controller ?? di.reportsController;
+  @override
+  State<ReportsScreen> createState() => _ReportsScreenState();
+}
+
+class _ReportsScreenState extends State<ReportsScreen> {
+  static final DateTime _earliest = DateTime(2020, 1);
+
+  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+
+  void _shift(int delta) =>
+      setState(() => _month = DateTime(_month.year, _month.month + delta));
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).languageCode;
+    final ltr = Directionality.of(context) == TextDirection.ltr;
+    final now = DateTime.now();
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.reports)),
-      body: SignalBuilder(
-        builder: (context) {
-          final totals = _c.totalsByCurrency.value;
-          final list = _c.filtered.value;
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _buildRangeSelector(context)),
-              SliverToBoxAdapter(child: _buildTotals(context, totals)),
-              if (list.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _EmptyState(label: l10n.noTransactions),
-                )
-              else
-                _buildList(context, list),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildRangeSelector(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: SignalBuilder(
-        builder: (context) => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SegmentedButton<ReportRangeType>(
-            segments: [
-              ButtonSegment(
-                value: ReportRangeType.today,
-                label: Text(l10n.today),
-              ),
-              ButtonSegment(
-                value: ReportRangeType.thisWeek,
-                label: Text(l10n.thisWeek),
-              ),
-              ButtonSegment(
-                value: ReportRangeType.thisMonth,
-                label: Text(l10n.thisMonth),
-              ),
-              ButtonSegment(value: ReportRangeType.all, label: Text(l10n.all)),
-            ],
-            selected: {_c.rangeType.value},
-            onSelectionChanged: (s) => _c.rangeType.value = s.first,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Totals: balance is the headline, income/expense secondary ────────
-  Widget _buildTotals(
-    BuildContext context,
-    Map<String, CurrencyTotals> totals,
-  ) {
-    final l10n = AppLocalizations.of(context);
-    if (totals.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: totals.entries.map((e) {
-        final t = e.value;
-        return Entrance(
-          child: Card(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Month switcher — pinned, always reachable.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
                 children: [
-                  Text(
-                    e.key,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                      color: kInkSecondary,
-                    ),
+                  IconButton(
+                    onPressed: _month.isAfter(_earliest)
+                        ? () => _shift(-1)
+                        : null,
+                    icon: Icon(ltr ? Icons.chevron_left : Icons.chevron_right),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.balance,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: kInkSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  CountUpText(
-                    value: t.balance,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
-                      color: t.balance >= 0 ? kInk : kExpense,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Divider(thickness: 1, height: 1, color: kBorder),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _stat(l10n.totalIncome, t.income, kIncome),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        intl.DateFormat.yMMMM(locale).format(_month),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: kInk,
+                        ),
                       ),
-                      Expanded(
-                        child: _stat(l10n.totalExpense, t.expense, kExpense),
-                      ),
-                    ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _month.isBefore(DateTime(now.year, now.month))
+                        ? () => _shift(1)
+                        : null,
+                    icon: Icon(ltr ? Icons.chevron_right : Icons.chevron_left),
                   ),
                 ],
               ),
             ),
-          ),
-        );
-      }).toList(),
-    );
-  }
+            const Divider(),
+            Expanded(
+              child: SignalBuilder(
+                builder: (context) {
+                  // Signal dependencies — recompute on tx changes.
+                  di.reportsController.txDays.value;
+                  di.reportsController.groupedByDay.value;
 
-  Widget _stat(String label, double value, Color color) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(1),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: kInkSecondary,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 4),
-      CountUpText(
-        value: value,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 16,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
-      ),
-    ],
-  );
+                  final daysInMonth = di.reportsController.txDays.value
+                      .where(
+                        (d) => d.year == _month.year && d.month == _month.month,
+                      )
+                      .toList();
 
-  // ── Grouped list: day headers + boxed tiles ───────────────────────────
-  Widget _buildList(BuildContext context, List<TransactionModel> list) {
-    // Assumes the controller returns newest-first; groups stay in order.
-    final groups = <_DayGroup>[];
-    for (final t in list) {
-      final day = DateTime(t.date.year, t.date.month, t.date.day);
-      if (groups.isNotEmpty && groups.last.day == day) {
-        groups.last.transactions.add(t);
-      } else {
-        groups.add(_DayGroup(day)..transactions.add(t));
-      }
-    }
+                  if (daysInMonth.isEmpty) {
+                    return Center(
+                      child: Entrance(
+                        child: Text(
+                          l10n.noTransactions,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: kInkMuted),
+                        ),
+                      ),
+                    );
+                  }
 
-    final items = <_ListItem>[];
-    for (final g in groups) {
-      items.add(
-        _ListItem(
-          ValueKey('day-${g.day.toIso8601String()}'),
-          _DayHeader(day: g.day),
-        ),
-      );
-      for (final t in g.transactions) {
-        items.add(
-          _ListItem(
-            ValueKey(t.id),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: TransactionTile(
-                transaction: t,
-                onDelete: () => di.transactionsController.remove(t.id!),
+                  final totals = <String, _CurTotals>{};
+                  final payees = <String, _PayeeTotal>{};
+
+                  for (final day in daysInMonth) {
+                    for (final e
+                        in di.reportsController
+                            .totalsForDay(day, type: TransactionType.income)
+                            .entries) {
+                      totals.putIfAbsent(e.key, _CurTotals.new).income +=
+                          e.value;
+                    }
+                    for (final e
+                        in di.reportsController
+                            .totalsForDay(day, type: TransactionType.expense)
+                            .entries) {
+                      totals.putIfAbsent(e.key, _CurTotals.new).expense +=
+                          e.value;
+                    }
+                    for (final t in di.reportsController.transactionsForDay(
+                      day,
+                    )) {
+                      final name = t.payee?.trim();
+                      if (name == null || name.isEmpty) continue;
+                      final p = payees.putIfAbsent(
+                        name,
+                        () => _PayeeTotal(name),
+                      );
+                      final net = p.netByCurrency[t.currency] ?? 0;
+                      p.netByCurrency[t.currency] =
+                          net +
+                          (t.type == TransactionType.income
+                              ? t.amount
+                              : -t.amount);
+                    }
+                  }
+
+                  final currencies = totals.keys.toList()..sort();
+                  final ranked = payees.values.toList()
+                    ..sort((a, b) => b.magnitude.compareTo(a.magnitude));
+
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    children: [
+                      for (final cur in currencies)
+                        Entrance(child: _totalsCard(l10n, cur, totals[cur]!)),
+                      if (ranked.isNotEmpty)
+                        Entrance(
+                          delay: kMotionStagger * 2,
+                          child: _payeesCard(l10n, ranked.take(5).toList()),
+                        ),
+                    ],
+                  );
+                },
               ),
-            ),
-          ),
-        );
-      }
-    }
-
-    return SliverPadding(
-      padding: const EdgeInsets.only(bottom: 16),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (ctx, i) => Entrance(
-            key: items[i].key,
-            // Stagger roughly the first screenful only.
-            delay: i < 8 ? kMotionStagger * i : Duration.zero,
-            child: items[i].child,
-          ),
-          childCount: items.length,
-          // Key-based matching keeps entrance states across rebuilds:
-          // single delete = no replay; range switch = full replay.
-          findChildIndexCallback: (key) {
-            final i = items.indexWhere((e) => e.key == key);
-            return i < 0 ? null : i;
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _DayGroup {
-  _DayGroup(this.day);
-
-  final DateTime day;
-  final List<TransactionModel> transactions = [];
-}
-
-class _ListItem {
-  const _ListItem(this.key, this.child);
-
-  final Key key;
-  final Widget child;
-}
-
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.day});
-
-  final DateTime day;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final now = DateTime.now();
-    final isToday =
-        day.year == now.year && day.month == now.month && day.day == now.day;
-    final label = isToday
-        ? l10n.today
-        : DateFormat.yMMMd(
-            Localizations.localeOf(context).languageCode,
-          ).format(day);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: kInkSecondary,
-            ),
-          ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Divider(thickness: 1, height: 1, color: kBorder),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Entrance(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(kRadius),
-                border: Border.all(color: kBorder),
-              ),
-              child: const Icon(
-                Icons.receipt_long_outlined,
-                size: 26,
-                color: kInkMuted,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: kInkMuted),
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _totalsCard(AppLocalizations l10n, String currency, _CurTotals t) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              currency,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+                color: kInkSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _stat(l10n.income, t.income, kIncome)),
+                Expanded(child: _stat(l10n.expense, t.expense, kExpense)),
+                Expanded(
+                  child: _stat(
+                    l10n.balance,
+                    t.net,
+                    t.net >= 0 ? kInk : kExpense,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stat(String label, double value, Color color) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: kInkSecondary,
+        ),
+      ),
+      const SizedBox(height: 4),
+      CountUpText(
+        value: value,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: color,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    ],
+  );
+
+  Widget _payeesCard(AppLocalizations l10n, List<_PayeeTotal> top) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.topPayees,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+                color: kInkSecondary,
+              ),
+            ),
+            for (var i = 0; i < top.length; i++) ...[
+              if (i > 0) const Divider(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        top[i].name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: kInk,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      _formatNet(top[i].netByCurrency),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: top[i].netSum >= 0 ? kIncome : kExpense,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatNet(Map<String, double> net) {
+    final keys = net.keys.toList()..sort();
+    return [
+      for (final k in keys)
+        '${net[k]! >= 0 ? '+' : ''}${net[k]!.toStringAsFixed(2)} $k',
+    ].join(' · ');
+  }
+}
+
+class _CurTotals {
+  double income = 0;
+  double expense = 0;
+  double get net => income - expense;
+}
+
+class _PayeeTotal {
+  _PayeeTotal(this.name);
+
+  final String name;
+  final Map<String, double> netByCurrency = {};
+
+  double get magnitude => netByCurrency.values.fold(0.0, (a, v) => a + v.abs());
+  double get netSum => netByCurrency.values.fold(0.0, (a, v) => a + v);
 }

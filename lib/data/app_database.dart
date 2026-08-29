@@ -15,7 +15,7 @@ class AppDatabase {
     final path = p.join(dir, 'i_and_o.db');
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute(createTransactionsTableSql);
         await db.execute(
@@ -24,6 +24,37 @@ class AppDatabase {
         await db.execute(
           'CREATE INDEX idx_transactions_payee ON transactions(payee)',
         );
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Dev data can be migrated freely — drop legacy columns if present.
+          // ALTER DROP COLUMN is supported on recent SQLite; fallback to recreate.
+          try {
+            await db.execute('ALTER TABLE transactions DROP COLUMN category');
+          } catch (_) {}
+          try {
+            await db.execute('ALTER TABLE transactions DROP COLUMN note');
+          } catch (_) {
+            // Fallback: recreate table without those columns (preserves payee data).
+            try {
+              await db.execute(
+                'ALTER TABLE transactions RENAME TO transactions_old',
+              );
+              await db.execute(createTransactionsTableSql);
+              await db.execute(
+                'INSERT INTO transactions (id, type, amount, currency, payee, date, created_at) '
+                'SELECT id, type, amount, currency, payee, date, created_at FROM transactions_old',
+              );
+              await db.execute('DROP TABLE transactions_old');
+              await db.execute(
+                'CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)',
+              );
+              await db.execute(
+                'CREATE INDEX IF NOT EXISTS idx_transactions_payee ON transactions(payee)',
+              );
+            } catch (_) {}
+          }
+        }
       },
     );
   }
@@ -35,10 +66,8 @@ const createTransactionsTableSql = '''
     type TEXT NOT NULL,
     amount REAL NOT NULL,
     currency TEXT NOT NULL,
-    category TEXT,
     payee TEXT,
-    note TEXT,
     date INTEGER NOT NULL,
     created_at INTEGER NOT NULL
   )
- ''';
+  ''';

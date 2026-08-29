@@ -146,18 +146,6 @@ abstract class AppLocalizations {
   /// **'Add Expense'**
   String get addExpense;
 
-  /// No description provided for @category.
-  ///
-  /// In en, this message translates to:
-  /// **'Category'**
-  String get category;
-
-  /// No description provided for @noteOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Note (optional)'**
-  String get noteOptional;
-
   /// No description provided for @payeeOptional.
   ///
   /// In en, this message translates to:
@@ -278,78 +266,6 @@ abstract class AppLocalizations {
   /// **'All'**
   String get all;
 
-  /// No description provided for @categorySales.
-  ///
-  /// In en, this message translates to:
-  /// **'Sales'**
-  String get categorySales;
-
-  /// No description provided for @categoryServices.
-  ///
-  /// In en, this message translates to:
-  /// **'Services'**
-  String get categoryServices;
-
-  /// No description provided for @categoryOtherIncome.
-  ///
-  /// In en, this message translates to:
-  /// **'Other Income'**
-  String get categoryOtherIncome;
-
-  /// No description provided for @categoryRent.
-  ///
-  /// In en, this message translates to:
-  /// **'Rent'**
-  String get categoryRent;
-
-  /// No description provided for @categoryPackaging.
-  ///
-  /// In en, this message translates to:
-  /// **'Packaging'**
-  String get categoryPackaging;
-
-  /// No description provided for @categoryUtilities.
-  ///
-  /// In en, this message translates to:
-  /// **'Utilities'**
-  String get categoryUtilities;
-
-  /// No description provided for @categorySupplies.
-  ///
-  /// In en, this message translates to:
-  /// **'Supplies'**
-  String get categorySupplies;
-
-  /// No description provided for @categorySalaries.
-  ///
-  /// In en, this message translates to:
-  /// **'Salaries'**
-  String get categorySalaries;
-
-  /// No description provided for @categoryMarketing.
-  ///
-  /// In en, this message translates to:
-  /// **'Marketing'**
-  String get categoryMarketing;
-
-  /// No description provided for @categoryTransport.
-  ///
-  /// In en, this message translates to:
-  /// **'Transport'**
-  String get categoryTransport;
-
-  /// No description provided for @categoryOtherExpense.
-  ///
-  /// In en, this message translates to:
-  /// **'Other Expense'**
-  String get categoryOtherExpense;
-
-  /// No description provided for @uncategorized.
-  ///
-  /// In en, this message translates to:
-  /// **'Uncategorized'**
-  String get uncategorized;
-
   /// No description provided for @savedWithAmount.
   ///
   /// In en, this message translates to:
@@ -379,6 +295,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This action cannot be undone.'**
   String get deleteConfirmMessage;
+
+  /// No description provided for @selectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date'**
+  String get selectDate;
+
+  /// No description provided for @deletedWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted {amount}'**
+  String deletedWithAmount(String amount);
+
+  /// No description provided for @editTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit transaction'**
+  String get editTransaction;
+
+  /// No description provided for @journal.
+  ///
+  /// In en, this message translates to:
+  /// **'Journal'**
+  String get journal;
+
+  /// No description provided for @topPayees.
+  ///
+  /// In en, this message translates to:
+  /// **'Top payees'**
+  String get topPayees;
 }
 
 class _AppLocalizationsDelegate

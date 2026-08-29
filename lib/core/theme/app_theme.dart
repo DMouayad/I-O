@@ -30,6 +30,8 @@ const Color kExpenseSoft = Color(0xFFFFF1F2); // rose-50
 
 const Color _surface = Color(0xFFF8FAFC); // slate-50
 const Color _seed = Color(0xFF1E293B); // slate-800
+/// Sunken surface for flush footers/toolbars (slate-100).
+const Color kSurfaceMuted = Color(0xFFF1F5F9);
 
 OutlineInputBorder _outline([Color color = kBorder, double width = 1]) =>
     OutlineInputBorder(
@@ -254,7 +256,7 @@ final appTheme = ThemeData(
       foregroundColor: kInk,
       side: const BorderSide(color: kBorder),
       elevation: 0,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      visualDensity: VisualDensity.standard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(kRadius)),
       ),
@@ -365,14 +367,7 @@ final appTheme = ThemeData(
       borderRadius: BorderRadius.all(Radius.circular(kRadius)),
     ),
   ),
-  bottomSheetTheme: const BottomSheetThemeData(
-    backgroundColor: Colors.white,
-    surfaceTintColor: Colors.transparent,
-    elevation: 0,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(kRadius)),
-    ),
-  ),
+
   floatingActionButtonTheme: FloatingActionButtonThemeData(
     backgroundColor: kInk,
     foregroundColor: Colors.white,
@@ -391,4 +386,25 @@ final appTheme = ThemeData(
     ),
   ),
   progressIndicatorTheme: const ProgressIndicatorThemeData(color: kInk),
+  // Add — so TabBar needs zero inline styling:
+  tabBarTheme: const TabBarThemeData(
+    labelColor: kInk,
+    unselectedLabelColor: kInkMuted,
+    indicatorColor: kInk,
+    dividerColor: kBorder,
+    labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+    unselectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+  ),
+
+  // Replace bottomSheetTheme with (adds the 1px rule, so showModalBottomSheet
+  // can be called bare):
+  bottomSheetTheme: const BottomSheetThemeData(
+    backgroundColor: Colors.white,
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(kRadius)),
+      side: BorderSide(color: kBorder, width: 1),
+    ),
+  ),
 );

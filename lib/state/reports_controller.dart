@@ -19,60 +19,48 @@ class ReportsController {
   ReportsController(this._transactionsController);
   final TransactionsController _transactionsController;
 
-  final Signal<ReportRangeType> rangeType = signal(ReportRangeType.thisMonth);
+  // ---- Day grouping helpers (for DayListScreen / DayScreen) ----
 
-  late final Computed<List<TransactionModel>> filtered = computed(() {
-    final all = _transactionsController.transactions.value;
-    final range = rangeType.value;
-    if (range == ReportRangeType.all) return all;
+  static DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-    final now = DateTime.now();
-    late DateTime start;
-    switch (range) {
-      case ReportRangeType.today:
-        start = DateTime(now.year, now.month, now.day);
-        break;
-      case ReportRangeType.thisWeek:
-        final d = now.subtract(Duration(days: now.weekday - 1));
-        start = DateTime(d.year, d.month, d.day);
-        break;
-      case ReportRangeType.thisMonth:
-        start = DateTime(now.year, now.month, 1);
-        break;
-      case ReportRangeType.all:
-        start = DateTime(0);
-        break;
-    }
-    return all.where((t) => !t.date.isBefore(start)).toList();
+  late final Computed<Map<DateTime, List<TransactionModel>>> groupedByDay =
+      computed(() {
+        final map = <DateTime, List<TransactionModel>>{};
+        for (final t in _transactionsController.transactions.value) {
+          final day = dateOnly(t.date);
+          (map[day] ??= []).add(t);
+        }
+        return map;
+      });
+
+  /// Days that have transactions, sorted desc (newest first).
+  late final Computed<List<DateTime>> txDays = computed(() {
+    final days = groupedByDay.value.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+    return days;
   });
 
-  late final Computed<Map<String, CurrencyTotals>> totalsByCurrency = computed(
-    () {
-      final map = <String, CurrencyTotals>{};
-      for (final t in filtered.value) {
-        final current = map[t.currency] ?? const CurrencyTotals();
-        map[t.currency] = t.type == TransactionType.income
-            ? current.copyWith(income: current.income + t.amount)
-            : current.copyWith(expense: current.expense + t.amount);
-      }
-      return map;
-    },
-  );
+  List<TransactionModel> transactionsForDay(DateTime day) {
+    return groupedByDay.value[dateOnly(day)] ?? const [];
+  }
 
-  late final Computed<Map<String, double>> incomeByCategory = computed(() {
-    return _sumByCategory(TransactionType.income);
-  });
+  List<TransactionModel> transactionsForDayAndType(
+    DateTime day,
+    TransactionType type,
+  ) {
+    return transactionsForDay(day).where((t) => t.type == type).toList();
+  }
 
-  late final Computed<Map<String, double>> expenseByCategory = computed(() {
-    return _sumByCategory(TransactionType.expense);
-  });
-
-  Map<String, double> _sumByCategory(TransactionType type) {
+  /// Per-currency sums for a day. If [type] is null → whole-day, else filtered by tab.
+  Map<String, double> totalsForDay(DateTime day, {TransactionType? type}) {
+    final list = type == null
+        ? transactionsForDay(day)
+        : transactionsForDayAndType(day, type);
     final map = <String, double>{};
-    for (final t in filtered.value.where((t) => t.type == type)) {
-      final key = t.category;
-      if (key == null) continue;
-      map[key] = (map[key] ?? 0) + t.amount;
+    for (final t in list) {
+      map[t.currency] =
+          (map[t.currency] ?? 0) +
+          (t.type == TransactionType.income ? t.amount : -t.amount);
     }
     return map;
   }
