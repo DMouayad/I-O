@@ -8,6 +8,33 @@ class AuthController {
   final Signal<bool> isAuthenticated = signal(false);
   final Signal<String?> lastError = signal(null);
 
+  /// Last successful unlock. Null until the first unlock this session —
+  /// expiry checks treat that as "not expired" (fresh launch always gates).
+  DateTime? lastUnlockedAt;
+
+  /// Test seam: allows freezing "now" in widget/unit tests.
+  DateTime Function() now = DateTime.now;
+
+  void _markUnlocked() {
+    isAuthenticated.value = true;
+    lastUnlockedAt = now();
+  }
+
+  /// Drops the session. The lifecycle watcher calls this on resume past
+  /// the grace period; the router then sends the user back to the gate.
+  void lock() {
+    isAuthenticated.value = false;
+    lastError.value = null;
+  }
+
+  /// True when [lastUnlockedAt] is older than [timeoutMinutes]. Returns
+  /// false when never unlocked this session or timeout is non-positive.
+  bool isExpired({required int timeoutMinutes}) {
+    final unlockedAt = lastUnlockedAt;
+    if (timeoutMinutes <= 0 || unlockedAt == null) return false;
+    return now().difference(unlockedAt).inSeconds >= timeoutMinutes * 60;
+  }
+
   Future<bool> authenticate() async {
     lastError.value = null;
     try {
@@ -15,7 +42,7 @@ class AuthController {
       if (!supported) {
         // No lock mechanism available on this device/emulator.
         debugPrint('[AuthController] isDeviceSupported=false → auto-allow');
-        isAuthenticated.value = true;
+        _markUnlocked();
         return true;
       }
       debugPrint(
@@ -26,7 +53,11 @@ class AuthController {
         biometricOnly: false,
       );
       debugPrint('[AuthController] authenticate result: $ok');
-      isAuthenticated.value = ok;
+      if (ok) {
+        _markUnlocked();
+      } else {
+        isAuthenticated.value = false;
+      }
       if (!ok) {
         lastError.value = 'Authentication returned false (canceled/failed)';
       }
@@ -47,7 +78,7 @@ class AuthController {
           final stillSupported = await _auth.isDeviceSupported();
           if (stillSupported) {
             lastError.value = null;
-            isAuthenticated.value = true;
+            _markUnlocked();
             return true;
           }
         } catch (_) {}

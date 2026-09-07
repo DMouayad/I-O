@@ -6,7 +6,7 @@ abstract class TransactionRepository {
   Future<int> update(TransactionModel t);
   Future<int> delete(int id);
   Future<List<TransactionModel>> getAll();
-  Future<List<String>> getPayeeSuggestions({String? query, int limit = 20});
+  Future<List<String>> getPayeeSuggestions({String? query, int limit = 5});
 }
 
 class SqfliteTransactionRepository implements TransactionRepository {
@@ -34,7 +34,7 @@ class SqfliteTransactionRepository implements TransactionRepository {
   @override
   Future<List<String>> getPayeeSuggestions({
     String? query,
-    int limit = 20,
+    int limit = 5,
   }) async {
     final hasQuery = query != null && query.trim().isNotEmpty;
     final rows = await _db.rawQuery(

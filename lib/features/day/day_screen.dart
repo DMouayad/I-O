@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' as semantics;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../core/currency.dart';
-import '../../core/motion.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/money_format.dart';
+import '../../core/theme/palette.dart';
 import '../../core/toast.dart';
 import '../../di.dart' as di;
 import '../../l10n/generated/app_localizations.dart';
@@ -13,6 +14,11 @@ import '../../models/transaction_model.dart';
 import 'currency_picker.dart';
 import 'edit_sheet.dart';
 import 'payee_field.dart';
+
+/// Tabs are fixed to these two types, in this order. Kept as an explicit
+/// list (rather than `TransactionType.values`) so the UI doesn't silently
+/// break if the model ever grows more transaction types.
+const _tabTypes = [TransactionType.income, TransactionType.expense];
 
 class DayScreen extends StatefulWidget {
   const DayScreen({super.key, required this.day});
@@ -25,13 +31,13 @@ class DayScreen extends StatefulWidget {
 
 class _DayScreenState extends State<DayScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+  late final DateTime _day = widget.day;
+  late final TabController _tabController = TabController(
+    length: _tabTypes.length,
+    vsync: this,
+  );
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
+  TransactionType get _currentType => _tabTypes[_tabController.index];
 
   @override
   void dispose() {
@@ -39,35 +45,24 @@ class _DayScreenState extends State<DayScreen>
     super.dispose();
   }
 
-  // ── Actions ───────────────────────────────────────────────────────────
-
-  /// Entry-bar add. The active tab decides the type; the list above the
-  /// bar is the feedback, so no toast.
   Future<void> _addTransaction(
     double amount,
     String currency,
     String? payee,
   ) async {
     final now = DateTime.now();
-    final id = await di.transactionsController.add(
-      TransactionModel(
-        type: _tabController.index == 0
-            ? TransactionType.income
-            : TransactionType.expense,
-        amount: amount,
-        currency: currency,
-        payee: payee,
-        date: DateTime(
-          widget.day.year,
-          widget.day.month,
-          widget.day.day,
-          now.hour,
-          now.minute,
-        ),
-        createdAt: now,
-      ),
+    final transaction = TransactionModel(
+      type: _currentType,
+      amount: amount,
+      currency: currency,
+      payee: payee,
+      date: DateTime(_day.year, _day.month, _day.day, now.hour, now.minute),
+      createdAt: now,
     );
-    if (mounted) {
+
+    try {
+      final id = await di.transactionsController.add(transaction);
+      if (!mounted) return;
       final l10n = AppLocalizations.of(context);
       showTopToast(
         context,
@@ -77,6 +72,9 @@ class _DayScreenState extends State<DayScreen>
         actionLabel: l10n.undo,
         onAction: () => di.transactionsController.remove(id),
       );
+    } catch (_) {
+      // Swallow: the entry bar keeps its values so the user can retry.
+      // (Wire this up to your error reporting / a toast if desired.)
     }
   }
 
@@ -96,7 +94,6 @@ class _DayScreenState extends State<DayScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      // Background / shape / border from bottomSheetTheme.
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: EditSheet(transaction: t, onDeleted: _showDeletedToast),
@@ -104,279 +101,359 @@ class _DayScreenState extends State<DayScreen>
     );
   }
 
-  String _formatTotals(Map<String, double> totals) {
-    final keys = totals.keys.toList()..sort();
-    return [
-      for (final cur in keys)
-        if (totals[cur] != 0)
-          '${totals[cur]! > 0 ? '+' : ''}${totals[cur]!.toStringAsFixed(2)} ${currencySymbol(cur)}',
-    ].join(' · ');
+  ({Map<String, double> income, Map<String, double> expense}) _dayTotals() {
+    final income = di.reportsController.totalsForDay(
+      _day,
+      type: TransactionType.income,
+    );
+    final expense = di.reportsController.totalsForDay(
+      _day,
+      type: TransactionType.expense,
+    );
+    return (
+      income: {
+        for (final e in income.entries)
+          if (e.value != 0) e.key: e.value,
+      },
+      expense: {
+        for (final e in expense.entries)
+          if (e.value != 0) e.key: -e.value,
+      },
+    );
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final dayLabel = DateFormat.yMMMd(
-      Localizations.localeOf(context).languageCode,
-    ).format(widget.day);
+    final pal = context.pal;
+    final locale = Localizations.localeOf(context).languageCode;
+    final isToday = DateUtils.isSameDay(_day, DateTime.now());
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: pal.surfaceHigh,
         centerTitle: true,
-        title: SignalBuilder(
-          builder: (_) {
-            di.reportsController.groupedByDay.value; // signal dependency
-            final totals = di.reportsController.totalsForDay(widget.day);
-            final net = _formatTotals(totals);
-            final isMulti = totals.values.where((v) => v != 0).length > 1;
-
-            final dateText = Text(
-              dayLabel,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: kInk,
-              ),
-            );
-            final netText = Text(
-              net,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: kInkSecondary,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            );
-
-            if (net.isEmpty) return dateText;
-            // Multi-currency: full-width line below the date.
-            if (isMulti) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  dateText,
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: netText,
-                  ),
-                ],
-              );
-            }
-            return Row(
-              mainAxisAlignment: .spaceBetween,
-              children: [
-                dateText,
-                const SizedBox(width: 8),
-                Flexible(child: netText),
-              ],
-            );
-          },
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: l10n.income),
-
-            Tab(text: l10n.expense),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              DateFormat.E(locale).format(_day).toUpperCase(),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+                color: isToday ? pal.primary : pal.textMuted,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              DateFormat.yMMMd(locale).format(_day),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: pal.text,
+              ),
+            ),
           ],
+        ),
+        // Extends the AppBar's own Material surface downward so the title
+        // row and the day summary read as a single header block.
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(42),
+          child: SignalBuilder(
+            dependencies: [di.reportsController.groupedByDay],
+            builder: (_) {
+              final totals = _dayTotals();
+              return _DaySummaryStrip(
+                income: totals.income,
+                expense: totals.expense,
+              );
+            },
+          ),
         ),
       ),
       body: SafeArea(
         child: Column(
           children: [
+            _TypeTabBar(controller: _tabController),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildTab(TransactionType.income),
-                  _buildTab(TransactionType.expense),
+                  for (final type in _tabTypes)
+                    _DayTransactionList(
+                      day: _day,
+                      type: type,
+                      onTapTransaction: _openEditSheet,
+                      onDeleted: _showDeletedToast,
+                    ),
                 ],
               ),
             ),
-            _EntryBar(onAdd: _addTransaction),
+            _CompactEntryBar(
+              tabController: _tabController,
+              onAdd: _addTransaction,
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildTab(TransactionType type) {
+class _TypeTabBar extends StatelessWidget {
+  const _TypeTabBar({required this.controller});
+
+  final TabController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
     final l10n = AppLocalizations.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: pal.border)),
+      ),
+      child: AnimatedBuilder(
+        animation: controller.animation!,
+        builder: (context, _) {
+          final t = controller.animation!.value.clamp(0.0, 1.0);
+          final accent = Color.lerp(pal.income, pal.expense, t)!;
+          return TabBar(
+            controller: controller,
+            dividerColor: Colors.transparent,
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              color: accent.withValues(alpha: .10),
+              border: Border(bottom: BorderSide(color: accent, width: 2)),
+            ),
+            labelColor: pal.text,
+            unselectedLabelColor: pal.textMuted,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+            tabs: [
+              Tab(text: l10n.income),
+              Tab(text: l10n.expense),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DaySummaryStrip extends StatelessWidget {
+  const _DaySummaryStrip({required this.income, required this.expense});
+
+  final Map<String, double> income;
+  final Map<String, double> expense;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final l10n = AppLocalizations.of(context);
+
+    final balance = <String, double>{
+      for (final cur in {...income.keys, ...expense.keys})
+        cur: (income[cur] ?? 0) - (expense[cur] ?? 0),
+    };
+
+    final incomeText = formatMoneyMap(income);
+    final expenseText = formatMoneyMap(expense, signed: false);
+    final balanceText = formatMoneyMap(balance);
+
+    return Semantics(
+      label:
+          '${l10n.income} $incomeText. '
+          '${l10n.expense} $expenseText. '
+          '${l10n.balance} $balanceText.',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Row(
+              children: [
+                _stat(incomeText, pal.income),
+                _divider(pal),
+                _stat(
+                  expenseText == '0.00' ? expenseText : '−$expenseText',
+                  pal.expense,
+                ),
+                _divider(pal),
+                _stat('= $balanceText', pal.text),
+              ],
+            ),
+          ),
+          Divider(height: 1, thickness: 1, color: pal.border),
+        ],
+      ),
+    );
+  }
+
+  Widget _divider(AppPalette pal) => Container(
+    width: 1.5,
+    height: 20,
+    margin: const EdgeInsets.symmetric(horizontal: 4),
+    color: pal.border,
+  );
+
+  Widget _stat(String value, Color color) {
+    return Expanded(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          value,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: color,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// ── Transaction list ─────────────────────────────────────────────────────────
+
+class _DayTransactionList extends StatelessWidget {
+  const _DayTransactionList({
+    required this.day,
+    required this.type,
+    required this.onTapTransaction,
+    required this.onDeleted,
+  });
+
+  final DateTime day;
+  final TransactionType type;
+  final ValueChanged<TransactionModel> onTapTransaction;
+  final ValueChanged<TransactionModel> onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final l10n = AppLocalizations.of(context);
+
     return SignalBuilder(
       dependencies: [di.reportsController.groupedByDay],
       builder: (_) {
-        final totals = {
-          for (final e
-              in di.reportsController
-                  .totalsForDay(widget.day, type: type)
-                  .entries)
-            if (e.value != 0) e.key: e.value,
-        };
-        final list = di.reportsController.transactionsForDayAndType(
-          widget.day,
-          type,
-        );
+        final list = di.reportsController.transactionsForDayAndType(day, type);
 
-        return Column(
-          children: [
-            if (totals.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Align(
-                  alignment: AlignmentDirectional.center,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: _TabTotal(totals: totals, type: type),
-                  ),
-                ),
+        if (list.isEmpty) {
+          return Center(
+            child: Text(
+              l10n.noTransactions,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: pal.textMuted,
               ),
-              const Divider(),
-            ],
-            Expanded(
-              child: list.isEmpty
-                  ? Center(
-                      child: Text(
-                        l10n.noTransactions,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: kInkMuted),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      itemCount: list.length,
-                      itemBuilder: (context, i) {
-                        final t = list[i];
-                        return _DayTxRow(
-                          transaction: t,
-                          onTap: () => _openEditSheet(t),
-                        );
-                      },
-                    ),
             ),
-          ],
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          itemCount: list.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 6),
+          itemBuilder: (context, i) {
+            final t = list[i];
+            return Dismissible(
+              key: ValueKey(t.id),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: pal.expenseSoft,
+                  borderRadius: BorderRadius.circular(kRadius),
+                ),
+                child: Icon(Icons.delete_outline, color: pal.expense, size: 22),
+              ),
+              onDismissed: (_) {
+                final id = t.id;
+                if (id == null) return;
+                di.transactionsController.remove(id);
+                onDeleted(t);
+              },
+              child: _CompactTxRow(
+                transaction: t,
+                onTap: () => onTapTransaction(t),
+              ),
+            );
+          },
         );
       },
     );
   }
 }
 
-/// Tab headline: one animated number per currency, e.g. "1,240.00 USD".
-/// Lives in content (full width), not in the tab label — money never
-/// belongs in navigation chrome.
-class _TabTotal extends StatelessWidget {
-  const _TabTotal({required this.totals, required this.type});
-
-  final Map<String, double> totals;
-  final TransactionType type;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = type == TransactionType.income ? kIncome : kExpense;
-    final keys = totals.keys.toList()..sort();
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        for (var i = 0; i < keys.length; i++) ...[
-          if (i > 0) const SizedBox(width: 12),
-          CountUpText(
-            value: totals[keys[i]]!,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
-              color: color,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            currencySymbol(keys[i]),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: kInkSecondary,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _DayTxRow extends StatelessWidget {
-  const _DayTxRow({required this.transaction, required this.onTap});
+class _CompactTxRow extends StatelessWidget {
+  const _CompactTxRow({required this.transaction, required this.onTap});
 
   final TransactionModel transaction;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final pal = context.pal;
     final isIncome = transaction.type == TransactionType.income;
-    final color = isIncome ? kIncome : kExpense;
+    final color = isIncome ? pal.income : pal.expense;
     final payee = transaction.payee?.trim();
     final hasPayee = payee != null && payee.isNotEmpty;
 
     return Material(
-      color: Colors.white,
+      color: pal.surfaceHigh,
       borderRadius: BorderRadius.circular(kRadius),
       child: InkWell(
         borderRadius: BorderRadius.circular(kRadius),
         onTap: onTap,
-        child: Ink(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            border: Border.all(color: kBorder, width: 1),
             borderRadius: BorderRadius.circular(kRadius),
+            border: Border.all(color: pal.border),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: isIncome ? kIncomeSoft : kExpenseSoft,
-                    borderRadius: BorderRadius.circular(kRadius),
-                  ),
-                  // Down = money in — same language as Reports.
-                  child: Icon(
-                    isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                    size: 18,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    hasPayee ? payee : '—',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: hasPayee ? kInk : kInkMuted,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '${isIncome ? '+' : '-'}${transaction.amount.toStringAsFixed(2)} ${currencySymbol(transaction.currency)}',
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  hasPayee ? payee : '—',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: hasPayee ? pal.text : pal.textMuted,
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${isIncome ? '+' : '-'}${transaction.amount.toStringAsFixed(2)} ${currencySymbol(transaction.currency)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -384,197 +461,181 @@ class _DayTxRow extends StatelessWidget {
   }
 }
 
-// ── Pinned entry bar ──────────────────────────────────────────────────────
+// ── Compact entry bar ────────────────────────────────────────────────────────
 
-/// Remembers the last used currency so rapid entry doesn't re-pick it.
-String? _lastCurrency;
+class _CompactEntryBar extends StatefulWidget {
+  const _CompactEntryBar({required this.onAdd, required this.tabController});
 
-class _EntryBar extends StatefulWidget {
-  const _EntryBar({required this.onAdd});
-
-  /// Screen applies the active tab's type.
   final void Function(double amount, String currency, String? payee) onAdd;
+  final TabController tabController;
 
   @override
-  State<_EntryBar> createState() => _EntryBarState();
+  State<_CompactEntryBar> createState() => _CompactEntryBarState();
 }
 
-class _EntryBarState extends State<_EntryBar> {
+class _CompactEntryBarState extends State<_CompactEntryBar> {
+  /// Remembers the last picked currency for the lifetime of the app so
+  /// switching days doesn't reset it. Encapsulated here rather than as a
+  /// top-level global.
+  static String? _lastUsedCurrency;
+
   final _amountCtrl = TextEditingController();
   final _payeeCtrl = TextEditingController();
   final _amountFocus = FocusNode();
   final _payeeFocus = FocusNode();
+
   late String _currency =
-      _lastCurrency ?? di.settingsController.settings.value.defaultCurrency;
-  bool _barFocused = false;
+      _lastUsedCurrency ?? di.settingsController.settings.value.defaultCurrency;
+
   bool _invalid = false;
-  int _invalidToken = 0;
+
+  bool get _canSubmit => (parseAmount(_amountCtrl.text) ?? 0) > 0;
 
   @override
   void initState() {
     super.initState();
-    _amountFocus.addListener(_syncFocus);
-    _payeeFocus.addListener(_syncFocus);
+    _amountCtrl.addListener(_onAmountChanged);
   }
 
-  void _syncFocus() {
-    final focused = _amountFocus.hasFocus || _payeeFocus.hasFocus;
-    if (focused != _barFocused) setState(() => _barFocused = focused);
+  void _onAmountChanged() {
+    if (_invalid && _canSubmit) {
+      setState(() => _invalid = false);
+    } else {
+      setState(() {}); // refresh submit-button enabled state
+    }
   }
 
   @override
   void dispose() {
-    _amountFocus.dispose();
-    _payeeFocus.dispose();
+    _amountCtrl.removeListener(_onAmountChanged);
     _amountCtrl.dispose();
     _payeeCtrl.dispose();
+    _amountFocus.dispose();
+    _payeeFocus.dispose();
     super.dispose();
   }
 
   void _add() {
-    final amount = double.tryParse(_amountCtrl.text.trim());
+    final amount = parseAmount(_amountCtrl.text);
     if (amount == null || amount <= 0) {
-      // No button to disable — flash the bar instead.
       HapticFeedback.lightImpact();
-      final token = ++_invalidToken;
       setState(() => _invalid = true);
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted && _invalidToken == token) {
-          setState(() => _invalid = false);
-        }
-      });
+      semantics.SemanticsService.sendAnnouncement(
+        View.of(context),
+        AppLocalizations.of(context).invalidAmount,
+        Directionality.of(context),
+      );
       return;
     }
+
     HapticFeedback.lightImpact();
-    _lastCurrency = _currency;
+    _lastUsedCurrency = _currency;
     final payee = _payeeCtrl.text.trim();
     widget.onAdd(amount, _currency, payee.isEmpty ? null : payee);
 
-    // Move focus off payee first (hides its suggestion panel without a
-    // one-frame flicker), then clear + keep the keyboard up.
-    _amountFocus.requestFocus();
     _amountCtrl.clear();
     _payeeCtrl.clear();
+    _amountFocus.requestFocus();
   }
 
   @override
   Widget build(BuildContext context) {
+    final pal = context.pal;
     final l10n = AppLocalizations.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Strong rule — the bar is the action zone; ink = action.
-        Container(height: 2, color: kInk),
-        AnimatedContainer(
-          duration: kMotionFast,
-          curve: kMotionCurve,
-          // Resting = sunken; focused = lifted white; invalid = flash.
-          color: _invalid
-              ? kExpenseSoft
-              : (_barFocused ? Colors.white : kSurfaceMuted),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+
+    return Container(
+      decoration: BoxDecoration(
+        color: pal.surfaceHigh,
+        border: Border(top: BorderSide(color: pal.border)),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             children: [
-              // Row 1 — currency + amount
-              Row(
-                children: [
-                  CurrencyPicker(
-                    value: _currency,
-                    onChanged: (v) => setState(() => _currency = v),
-                  ),
-                  // PopupMenuButton<String>(
-                  //   initialValue: _currency,
-                  //   tooltip: '',
-                  //   padding: EdgeInsets.zero,
-                  //   onSelected: (v) => setState(() => _currency = v),
-                  //   itemBuilder: (_) => _currencyItems(_currency),
-                  //   child: Padding(
-                  //     padding: const EdgeInsetsDirectional.only(
-                  //       start: 16,
-                  //       end: 4,
-                  //     ),
-                  //     child: Row(
-                  //       mainAxisSize: MainAxisSize.min,
-                  //       children: [
-                  //         Text(
-                  //           _currency,
-                  //           style: const TextStyle(
-                  //             fontSize: 13,
-                  //             fontWeight: FontWeight.w600,
-                  //             color: kInkSecondary,
-                  //           ),
-                  //         ),
-                  //         const Icon(
-                  //           Icons.expand_more,
-                  //           size: 16,
-                  //           color: kInkMuted,
-                  //         ),
-                  //       ],
-                  //     ),
-                  //   ),
-                  // ),
-                  Expanded(
-                    child: TextField(
-                      controller: _amountCtrl,
-                      focusNode: _amountFocus,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      textInputAction: TextInputAction.next,
-                      onSubmitted: (_) => _payeeFocus.requestFocus(),
-                      onChanged: (_) {
-                        if (_invalid) setState(() => _invalid = false);
-                      },
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
-                        color: kInk,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: '0.00',
-                        hintStyle: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          color: kInkMuted,
-                        ),
-                        border: InputBorder.none,
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(width: 2),
-                        ),
-                        contentPadding: EdgeInsetsDirectional.fromSTEB(
-                          8,
-                          12,
-                          16,
-                          12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              CurrencyPicker(
+                value: _currency,
+                onChanged: (v) => setState(() => _currency = v),
               ),
-              const Divider(height: 1, thickness: 1, color: kBorder),
-              // Row 2 — payee (compact), suggestions open upward
-              PayeeField(
-                controller: _payeeCtrl,
-                focusNode: _payeeFocus,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _add(),
-                decoration: InputDecoration(
-                  hintText: l10n.payeeOptional,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _amountCtrl,
+                  focusNode: _amountFocus,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _payeeFocus.requestFocus(),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: _invalid ? pal.expense : pal.text,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                  decoration: InputDecoration(
+                    hintText: '0.00',
+                    isDense: true,
+                    hintStyle: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: pal.textMuted,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
                   ),
                 ),
               ),
             ],
           ),
-        ),
-      ],
+
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: PayeeField(
+                  controller: _payeeCtrl,
+                  focusNode: _payeeFocus,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _add(),
+                  decoration: InputDecoration(
+                    hintText: l10n.payeeOptional,
+                    hintStyle: TextStyle(fontSize: 13, color: pal.textMuted),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              AnimatedBuilder(
+                animation: widget.tabController.animation!,
+                builder: (context, _) {
+                  final t = widget.tabController.animation!.value.clamp(
+                    0.0,
+                    1.0,
+                  );
+                  final accent = Color.lerp(pal.income, pal.expense, t)!;
+                  return SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: IconButton.filled(
+                      style: IconButton.styleFrom(
+                        backgroundColor: _canSubmit ? accent : pal.border,
+                        foregroundColor: pal.onPrimary,
+                        padding: EdgeInsets.zero,
+                      ),
+                      onPressed: _canSubmit ? _add : null,
+                      icon: const Icon(Icons.done, size: 20),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
-} // ── Edit sheet (edit-only — adds go through the pinned bar) ───────────────
+}

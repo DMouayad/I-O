@@ -24,4 +24,10 @@ class SettingsController {
     await _repo.saveBiometricEnabled(value);
     settings.value = settings.value.copyWith(biometricEnabled: value);
   }
+
+  Future<void> setLockTimeoutMinutes(int value) async {
+    assert(value > 0, 'lock timeout must be positive');
+    await _repo.saveLockTimeoutMinutes(value);
+    settings.value = settings.value.copyWith(lockTimeoutMinutes: value);
+  }
 }

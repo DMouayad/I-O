@@ -6,6 +6,7 @@ abstract class SettingsRepository {
   Future<void> saveLanguage(String code);
   Future<void> saveDefaultCurrency(String code);
   Future<void> saveBiometricEnabled(bool value);
+  Future<void> saveLockTimeoutMinutes(int value);
 }
 
 class SharedPrefsSettingsRepository implements SettingsRepository {
@@ -15,12 +16,14 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const _kLang = 'language_code';
   static const _kCurrency = 'default_currency';
   static const _kBio = 'biometric_enabled';
+  static const _kLockTimeout = 'lock_timeout_minutes';
 
   @override
   AppSettings load() => AppSettings(
     languageCode: _prefs.getString(_kLang) ?? 'en',
     defaultCurrency: _prefs.getString(_kCurrency) ?? 'USD',
     biometricEnabled: _prefs.getBool(_kBio) ?? true,
+    lockTimeoutMinutes: _sanitizeTimeout(_prefs.getInt(_kLockTimeout)),
   );
 
   @override
@@ -32,4 +35,11 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> saveBiometricEnabled(bool value) => _prefs.setBool(_kBio, value);
+
+  @override
+  Future<void> saveLockTimeoutMinutes(int value) =>
+      _prefs.setInt(_kLockTimeout, value);
 }
+
+/// Guards against corrupt/legacy stored values (e.g. 0 from another version).
+int _sanitizeTimeout(int? stored) => stored == null || stored <= 0 ? 5 : stored;

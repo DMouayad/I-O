@@ -31,9 +31,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             label: l10n.reports,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.add_home_outlined),
-            selectedIcon: const Icon(Icons.add_home_rounded),
-            label: l10n.add,
+            icon: const Icon(Icons.calendar_month_outlined),
+            selectedIcon: const Icon(Icons.calendar_month_rounded),
+            label: l10n.journal,
           ),
           NavigationDestination(
             icon: const Icon(Icons.settings_outlined),

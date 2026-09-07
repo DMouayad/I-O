@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:io/core/motion.dart';
-import 'package:io/core/theme/app_theme.dart';
+import 'package:io/core/theme/palette.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../di.dart';
@@ -44,6 +44,7 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pal = context.pal;
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
@@ -57,11 +58,11 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: pal.surfaceHigh,
                     borderRadius: BorderRadius.circular(kRadius),
-                    border: Border.all(color: kBorder),
+                    border: Border.all(color: pal.border),
                   ),
-                  child: const Icon(Icons.lock_outlined, size: 30, color: kInk),
+                  child: Icon(Icons.lock_outlined, size: 30, color: pal.text),
                 ),
                 const SizedBox(height: 20),
                 Entrance(
@@ -89,7 +90,7 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                       err,
                       style: Theme.of(
                         context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.red),
+                      ).textTheme.bodySmall?.copyWith(color: pal.expense),
                       textAlign: TextAlign.center,
                     );
                   },

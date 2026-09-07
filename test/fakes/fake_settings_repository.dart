@@ -21,4 +21,9 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<void> saveBiometricEnabled(bool value) async {
     _settings = _settings.copyWith(biometricEnabled: value);
   }
+
+  @override
+  Future<void> saveLockTimeoutMinutes(int value) async {
+    _settings = _settings.copyWith(lockTimeoutMinutes: value);
+  }
 }

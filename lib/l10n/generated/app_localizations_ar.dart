@@ -24,9 +24,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settings => 'الإعدادات';
 
   @override
-  String get add => 'إضافة';
-
-  @override
   String get addIncome => 'إضافة دخل';
 
   @override
@@ -40,15 +37,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get save => 'حفظ';
-
-  @override
-  String get cancel => 'إلغاء';
-
-  @override
-  String get totalIncome => 'الدخل';
-
-  @override
-  String get totalExpense => 'المصروف';
 
   @override
   String get balance => 'الرصيد';
@@ -69,6 +57,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get biometricAuth => 'قفل بصمة / رمز الدخول';
 
   @override
+  String get lockAfter => 'القفل بعد';
+
+  @override
+  String get minutesShort => 'د';
+
+  @override
   String get unlock => 'فتح القفل';
 
   @override
@@ -84,15 +78,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get today => 'اليوم';
 
   @override
-  String get thisWeek => 'هذا الأسبوع';
-
-  @override
-  String get thisMonth => 'هذا الشهر';
-
-  @override
-  String get all => 'الكل';
-
-  @override
   String savedWithAmount(String amount) {
     return 'تم الحفظ $amount';
   }
@@ -104,15 +89,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get delete => 'حذف';
 
   @override
-  String get deleteConfirmTitle => 'حذف المعاملة؟';
-
-  @override
-  String get deleteConfirmMessage => 'لا يمكن التراجع عن هذا الإجراء.';
-
-  @override
-  String get selectDate => 'اختيار التاريخ';
-
-  @override
   String deletedWithAmount(String amount) {
     return 'تم حذف $amount';
   }
@@ -121,8 +97,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get editTransaction => 'تعديل المعاملة';
 
   @override
-  String get journal => 'Journal';
+  String get journal => 'السجل';
 
   @override
   String get topPayees => 'أكبر الجهات';
+
+  @override
+  String get collapseCalendar => 'طيّ التقويم';
+
+  @override
+  String get expandCalendar => 'توسيع التقويم';
+
+  @override
+  String get tapToRecordToday => '+ اضغط لتسجيل معاملات اليوم';
 }

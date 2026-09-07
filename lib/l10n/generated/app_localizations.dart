@@ -128,12 +128,6 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settings;
 
-  /// No description provided for @add.
-  ///
-  /// In en, this message translates to:
-  /// **'Add'**
-  String get add;
-
   /// No description provided for @addIncome.
   ///
   /// In en, this message translates to:
@@ -163,24 +157,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save'**
   String get save;
-
-  /// No description provided for @cancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get cancel;
-
-  /// No description provided for @totalIncome.
-  ///
-  /// In en, this message translates to:
-  /// **'Income'**
-  String get totalIncome;
-
-  /// No description provided for @totalExpense.
-  ///
-  /// In en, this message translates to:
-  /// **'Expense'**
-  String get totalExpense;
 
   /// No description provided for @balance.
   ///
@@ -218,6 +194,18 @@ abstract class AppLocalizations {
   /// **'Biometric / PIN Lock'**
   String get biometricAuth;
 
+  /// No description provided for @lockAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock after'**
+  String get lockAfter;
+
+  /// No description provided for @minutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get minutesShort;
+
   /// No description provided for @unlock.
   ///
   /// In en, this message translates to:
@@ -248,24 +236,6 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get today;
 
-  /// No description provided for @thisWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'This Week'**
-  String get thisWeek;
-
-  /// No description provided for @thisMonth.
-  ///
-  /// In en, this message translates to:
-  /// **'This Month'**
-  String get thisMonth;
-
-  /// No description provided for @all.
-  ///
-  /// In en, this message translates to:
-  /// **'All'**
-  String get all;
-
   /// No description provided for @savedWithAmount.
   ///
   /// In en, this message translates to:
@@ -283,24 +253,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get delete;
-
-  /// No description provided for @deleteConfirmTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete transaction?'**
-  String get deleteConfirmTitle;
-
-  /// No description provided for @deleteConfirmMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'This action cannot be undone.'**
-  String get deleteConfirmMessage;
-
-  /// No description provided for @selectDate.
-  ///
-  /// In en, this message translates to:
-  /// **'Select date'**
-  String get selectDate;
 
   /// No description provided for @deletedWithAmount.
   ///
@@ -325,6 +277,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Top payees'**
   String get topPayees;
+
+  /// No description provided for @collapseCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse calendar'**
+  String get collapseCalendar;
+
+  /// No description provided for @expandCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand calendar'**
+  String get expandCalendar;
+
+  /// No description provided for @tapToRecordToday.
+  ///
+  /// In en, this message translates to:
+  /// **'+ Tap to record today transactions'**
+  String get tapToRecordToday;
 }
 
 class _AppLocalizationsDelegate

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' as semantics;
 import 'package:flutter/services.dart';
 import 'package:io/core/currency.dart';
-import 'package:io/core/theme/app_theme.dart';
+import 'package:io/core/theme/palette.dart';
 import 'package:io/di.dart' as di;
 import 'package:io/l10n/generated/app_localizations.dart';
 import 'package:io/models/transaction_model.dart';
@@ -31,6 +32,8 @@ class _EditSheetState extends State<EditSheet> {
   final _amountFocus = FocusNode();
   final _payeeFocus = FocusNode();
   late String _currency;
+
+  String? _error;
   bool _saving = false;
 
   @override
@@ -58,14 +61,21 @@ class _EditSheetState extends State<EditSheet> {
   Future<void> _save() async {
     if (_saving) return;
     final l10n = AppLocalizations.of(context);
-    final amount = double.tryParse(_amountCtrl.text.trim());
+    final amount = parseAmount(_amountCtrl.text);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.invalidAmount)));
+      HapticFeedback.lightImpact();
+      setState(() => _error = l10n.invalidAmount);
+      semantics.SemanticsService.sendAnnouncement(
+        View.of(context),
+        l10n.invalidAmount,
+        Directionality.of(context),
+      );
       return;
     }
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final payee = _payeeCtrl.text.trim();
     final t = widget.transaction;
 
@@ -98,6 +108,7 @@ class _EditSheetState extends State<EditSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final pal = context.pal;
     final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: SingleChildScrollView(
@@ -111,7 +122,7 @@ class _EditSheetState extends State<EditSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: kBorder,
+                  color: pal.border,
                   borderRadius: BorderRadius.circular(kRadius),
                 ),
               ),
@@ -122,10 +133,10 @@ class _EditSheetState extends State<EditSheet> {
                 Expanded(
                   child: Text(
                     l10n.editTransaction,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: kInk,
+                      color: pal.text,
                     ),
                   ),
                 ),
@@ -136,6 +147,7 @@ class _EditSheetState extends State<EditSheet> {
               ],
             ),
             const SizedBox(height: 12),
+
             TextField(
               controller: _amountCtrl,
               focusNode: _amountFocus,
@@ -144,29 +156,44 @@ class _EditSheetState extends State<EditSheet> {
               ),
               textInputAction: TextInputAction.next,
               onSubmitted: (_) => _payeeFocus.requestFocus(),
-              style: const TextStyle(
+              onChanged: (_) {
+                if (_error != null) setState(() => _error = null);
+              },
+              style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.5,
-                color: kInk,
+                color: pal.text,
               ),
               // Border / fill / padding from inputDecorationTheme — only
               // the oversized type is sheet-specific.
               decoration: InputDecoration(
                 hintText: '0.00',
-                hintStyle: const TextStyle(
-                  color: kInkMuted,
+                hintStyle: TextStyle(
+                  color: pal.textMuted,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                 ),
                 prefixText: '${currencySymbol(_currency)} ',
-                prefixStyle: const TextStyle(
-                  color: kInkMuted,
+                prefixStyle: TextStyle(
+                  color: pal.textMuted,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  _error!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: pal.expense,
+                  ),
+                ),
+              ),
             const SizedBox(height: 10),
             PayeeField(
               controller: _payeeCtrl,
@@ -185,7 +212,9 @@ class _EditSheetState extends State<EditSheet> {
                   child: OutlinedButton(
                     onPressed: _saving ? null : _delete,
                     // Everything but the destructive color is themed.
-                    style: OutlinedButton.styleFrom(foregroundColor: kExpense),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: pal.expense,
+                    ),
                     child: Text(l10n.delete),
                   ),
                 ),
@@ -193,7 +222,7 @@ class _EditSheetState extends State<EditSheet> {
                 Expanded(
                   child: FilledButton(
                     onPressed: _saving ? null : _save,
-                    child: Text(_saving ? '...' : l10n.save),
+                    child: Text(l10n.save),
                   ),
                 ),
               ],

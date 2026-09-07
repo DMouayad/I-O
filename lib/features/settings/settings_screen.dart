@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:io/core/theme/app_theme.dart';
+import 'package:io/core/theme/palette.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../core/currency.dart';
@@ -62,6 +62,24 @@ class SettingsScreen extends StatelessWidget {
                 value: s.biometricEnabled,
                 onChanged: _c.setBiometricEnabled,
               ),
+              if (s.biometricEnabled)
+                ListTile(
+                  title: Text(l10n.lockAfter),
+                  trailing: _DropdownBox<int>(
+                    value: s.lockTimeoutMinutes,
+                    items: const [1, 5, 15, 30]
+                        .map(
+                          (m) => DropdownMenuItem(
+                            value: m,
+                            child: Text('$m ${l10n.minutesShort}'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) _c.setLockTimeoutMinutes(v);
+                    },
+                  ),
+                ),
               const Divider(),
               ListTile(title: Text(l10n.about), subtitle: const Text('v1.0.0')),
             ],
@@ -74,37 +92,38 @@ class SettingsScreen extends StatelessWidget {
 
 /// Trailing dropdown styled like the boxed inputs: white, 1px border, no
 /// default underline.
-class _DropdownBox extends StatelessWidget {
+class _DropdownBox<T> extends StatelessWidget {
   const _DropdownBox({
     required this.value,
     required this.items,
     required this.onChanged,
   });
 
-  final String value;
-  final List<DropdownMenuItem<String>> items;
-  final ValueChanged<String?> onChanged;
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final pal = context.pal;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: pal.surfaceHigh,
         borderRadius: BorderRadius.circular(kRadius),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: pal.border),
       ),
-      child: DropdownButton<String>(
+      child: DropdownButton<T>(
         value: value,
         items: items,
         onChanged: onChanged,
         underline: const SizedBox.shrink(),
         borderRadius: BorderRadius.circular(kRadius),
         iconSize: 20,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: kInk,
+          color: pal.text,
         ),
       ),
     );

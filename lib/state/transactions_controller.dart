@@ -47,13 +47,13 @@ class TransactionsController {
       if (!seen.add(lower)) continue;
       if (q.isEmpty || lower.contains(q)) {
         out.add(p);
-        if (out.length >= 20) break;
+        if (out.length >= 5) break;
       }
     }
     return out;
   }
 
   /// Async fallback when you need DB-level suggestions (e.g. before load).
-  Future<List<String>> payeeSuggestionsAsync({String? query, int limit = 20}) =>
+  Future<List<String>> payeeSuggestionsAsync({String? query, int limit = 5}) =>
       _repo.getPayeeSuggestions(query: query, limit: limit);
 }

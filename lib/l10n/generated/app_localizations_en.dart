@@ -24,9 +24,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings => 'Settings';
 
   @override
-  String get add => 'Add';
-
-  @override
   String get addIncome => 'Add Income';
 
   @override
@@ -40,15 +37,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get save => 'Save';
-
-  @override
-  String get cancel => 'Cancel';
-
-  @override
-  String get totalIncome => 'Income';
-
-  @override
-  String get totalExpense => 'Expense';
 
   @override
   String get balance => 'Balance';
@@ -69,6 +57,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get biometricAuth => 'Biometric / PIN Lock';
 
   @override
+  String get lockAfter => 'Lock after';
+
+  @override
+  String get minutesShort => 'min';
+
+  @override
   String get unlock => 'Unlock';
 
   @override
@@ -84,15 +78,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get today => 'Today';
 
   @override
-  String get thisWeek => 'This Week';
-
-  @override
-  String get thisMonth => 'This Month';
-
-  @override
-  String get all => 'All';
-
-  @override
   String savedWithAmount(String amount) {
     return 'Saved $amount';
   }
@@ -102,15 +87,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get delete => 'Delete';
-
-  @override
-  String get deleteConfirmTitle => 'Delete transaction?';
-
-  @override
-  String get deleteConfirmMessage => 'This action cannot be undone.';
-
-  @override
-  String get selectDate => 'Select date';
 
   @override
   String deletedWithAmount(String amount) {
@@ -125,4 +101,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get topPayees => 'Top payees';
+
+  @override
+  String get collapseCalendar => 'Collapse calendar';
+
+  @override
+  String get expandCalendar => 'Expand calendar';
+
+  @override
+  String get tapToRecordToday => '+ Tap to record today transactions';
 }
