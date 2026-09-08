@@ -20,7 +20,7 @@ class JournalScreen extends StatefulWidget {
 
 class _JournalScreenState extends State<JournalScreen> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
-  bool _calendarExpanded = true;
+  bool _calendarExpanded = false;
 
   @override
   Widget build(BuildContext context) {

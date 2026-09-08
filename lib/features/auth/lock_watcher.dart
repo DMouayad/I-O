@@ -4,9 +4,13 @@ import 'package:io/routing/app_router.dart';
 
 /// Re-locks the app when it returns from background after the grace period.
 ///
-/// Wraps the whole app (see [MyApp]). On backgrounding it stamps the time;
-/// on resume, when the biometric lock is enabled and the user was away longer
-/// than [lockTimeoutMinutes], it locks and routes back to the auth gate.
+/// Wraps the whole app (see [MyApp]). On backgrounding ([AppLifecycleState.paused])
+/// it stamps the time; on resume, when the biometric lock is enabled and the
+/// user was away longer than [lockTimeoutMinutes], it locks and routes back
+/// to the auth gate.
+///
+/// Only [AppLifecycleState.paused] arms the timer: the biometric system sheet
+/// itself fires [AppLifecycleState.inactive], which must not pollute the stamp.
 class LockWatcher extends StatefulWidget {
   const LockWatcher({super.key, required this.child});
   final Widget child;
@@ -32,9 +36,7 @@ class _LockWatcherState extends State<LockWatcher> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
+    if (state == AppLifecycleState.paused) {
       _backgroundedAt = di.authController.now();
     } else if (state == AppLifecycleState.resumed) {
       _onResumed();

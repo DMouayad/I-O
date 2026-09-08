@@ -109,5 +109,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get expandCalendar => 'توسيع التقويم';
 
   @override
-  String get tapToRecordToday => '+ اضغط لتسجيل معاملات اليوم';
+  String get tapToRecordToday => 'اضغط لتسجيل معاملات اليوم';
+
+  @override
+  String get authPromptReason => 'قم بالمصادقة للوصول إلى بياناتك';
+
+  @override
+  String get authNoBiometrics =>
+      'لا توجد بصمة مسجلة — استخدم رمز الجهاز أو سجّل بصمة في الإعدادات';
+
+  @override
+  String get authNoScreenLock =>
+      'لا يوجد قفل شاشة — عيّن رمز PIN في إعدادات النظام';
+
+  @override
+  String get authTimedOut => 'انتهت مهلة المصادقة — حاول مجددًا';
+
+  @override
+  String get authFailed => 'فشلت المصادقة — حاول مجددًا';
+
+  @override
+  String get noDeviceLockTitle => 'لا يوجد قفل على الجهاز';
+
+  @override
+  String get noDeviceLockMessage =>
+      'هذا الجهاز لا يحتوي على رمز PIN أو بصمة، لذلك سيُفتح التطبيق دون مصادقة. عيّن قفل شاشة لحماية بياناتك.';
+
+  @override
+  String get continueButton => 'متابعة';
 }

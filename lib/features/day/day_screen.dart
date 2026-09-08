@@ -557,8 +557,14 @@ class _CompactEntryBarState extends State<_CompactEntryBar> {
               CurrencyPicker(
                 value: _currency,
                 onChanged: (v) => setState(() => _currency = v),
+                flush: true,
               ),
-              const SizedBox(width: 8),
+              Container(
+                width: 1,
+                height: 22,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                color: pal.border.withValues(alpha: 0.5),
+              ),
               Expanded(
                 child: TextField(
                   controller: _amountCtrl,
@@ -576,11 +582,10 @@ class _CompactEntryBarState extends State<_CompactEntryBar> {
                   ),
                   decoration: InputDecoration(
                     hintText: '0.00',
-                    isDense: true,
                     hintStyle: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: pal.textMuted,
+                      color: pal.textMuted.withValues(alpha: 0.5),
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 6),
@@ -589,7 +594,6 @@ class _CompactEntryBarState extends State<_CompactEntryBar> {
               ),
             ],
           ),
-
           const SizedBox(height: 4),
           Row(
             children: [
@@ -603,7 +607,6 @@ class _CompactEntryBarState extends State<_CompactEntryBar> {
                     hintText: l10n.payeeOptional,
                     hintStyle: TextStyle(fontSize: 13, color: pal.textMuted),
                     border: InputBorder.none,
-                    isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),

@@ -34,5 +34,13 @@
 "topPayees": "Top payees",
 "collapseCalendar": "Collapse calendar",
 "expandCalendar": "Expand calendar",
-"tapToRecordToday": "+ Tap to record today transactions"
+  "tapToRecordToday": "Tap to record today transactions",
+  "authPromptReason": "Authenticate to access your data",
+  "authNoBiometrics": "No biometrics enrolled — use device PIN or enroll in Settings",
+  "authNoScreenLock": "No screen lock set — set a PIN in system Settings",
+  "authTimedOut": "Authentication timed out — please try again",
+  "authFailed": "Authentication failed — please try again",
+  "noDeviceLockTitle": "No device lock set",
+  "noDeviceLockMessage": "This device has no PIN or biometrics, so the app will open without authentication. Set a screen lock to protect your data.",
+  "continueButton": "Continue"
 }

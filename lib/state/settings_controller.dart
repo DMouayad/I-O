@@ -30,4 +30,9 @@ class SettingsController {
     await _repo.saveLockTimeoutMinutes(value);
     settings.value = settings.value.copyWith(lockTimeoutMinutes: value);
   }
+
+  Future<void> setSeenInsecureDeviceWarning(bool value) async {
+    await _repo.saveSeenInsecureDeviceWarning(value);
+    settings.value = settings.value.copyWith(seenInsecureDeviceWarning: value);
+  }
 }

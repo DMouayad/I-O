@@ -28,7 +28,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final pal = context.pal;
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).languageCode;
-    final ltr = Directionality.of(context) == TextDirection.ltr;
     final now = DateTime.now();
 
     return Scaffold(

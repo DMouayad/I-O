@@ -109,5 +109,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expandCalendar => 'Expand calendar';
 
   @override
-  String get tapToRecordToday => '+ Tap to record today transactions';
+  String get tapToRecordToday => 'Tap to record today transactions';
+
+  @override
+  String get authPromptReason => 'Authenticate to access your data';
+
+  @override
+  String get authNoBiometrics =>
+      'No biometrics enrolled — use device PIN or enroll in Settings';
+
+  @override
+  String get authNoScreenLock =>
+      'No screen lock set — set a PIN in system Settings';
+
+  @override
+  String get authTimedOut => 'Authentication timed out — please try again';
+
+  @override
+  String get authFailed => 'Authentication failed — please try again';
+
+  @override
+  String get noDeviceLockTitle => 'No device lock set';
+
+  @override
+  String get noDeviceLockMessage =>
+      'This device has no PIN or biometrics, so the app will open without authentication. Set a screen lock to protect your data.';
+
+  @override
+  String get continueButton => 'Continue';
 }

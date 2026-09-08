@@ -293,8 +293,56 @@ abstract class AppLocalizations {
   /// No description provided for @tapToRecordToday.
   ///
   /// In en, this message translates to:
-  /// **'+ Tap to record today transactions'**
+  /// **'Tap to record today transactions'**
   String get tapToRecordToday;
+
+  /// No description provided for @authPromptReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to access your data'**
+  String get authPromptReason;
+
+  /// No description provided for @authNoBiometrics.
+  ///
+  /// In en, this message translates to:
+  /// **'No biometrics enrolled — use device PIN or enroll in Settings'**
+  String get authNoBiometrics;
+
+  /// No description provided for @authNoScreenLock.
+  ///
+  /// In en, this message translates to:
+  /// **'No screen lock set — set a PIN in system Settings'**
+  String get authNoScreenLock;
+
+  /// No description provided for @authTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication timed out — please try again'**
+  String get authTimedOut;
+
+  /// No description provided for @authFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed — please try again'**
+  String get authFailed;
+
+  /// No description provided for @noDeviceLockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No device lock set'**
+  String get noDeviceLockTitle;
+
+  /// No description provided for @noDeviceLockMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This device has no PIN or biometrics, so the app will open without authentication. Set a screen lock to protect your data.'**
+  String get noDeviceLockMessage;
+
+  /// No description provided for @continueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueButton;
 }
 
 class _AppLocalizationsDelegate

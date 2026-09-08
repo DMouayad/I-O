@@ -34,5 +34,13 @@
   "topPayees": "أكبر الجهات",
   "collapseCalendar": "طيّ التقويم",
 "expandCalendar": "توسيع التقويم",
-"tapToRecordToday": "+ اضغط لتسجيل معاملات اليوم"
+  "tapToRecordToday": "اضغط لتسجيل معاملات اليوم",
+  "authPromptReason": "قم بالمصادقة للوصول إلى بياناتك",
+  "authNoBiometrics": "لا توجد بصمة مسجلة — استخدم رمز الجهاز أو سجّل بصمة في الإعدادات",
+  "authNoScreenLock": "لا يوجد قفل شاشة — عيّن رمز PIN في إعدادات النظام",
+  "authTimedOut": "انتهت مهلة المصادقة — حاول مجددًا",
+  "authFailed": "فشلت المصادقة — حاول مجددًا",
+  "noDeviceLockTitle": "لا يوجد قفل على الجهاز",
+  "noDeviceLockMessage": "هذا الجهاز لا يحتوي على رمز PIN أو بصمة، لذلك سيُفتح التطبيق دون مصادقة. عيّن قفل شاشة لحماية بياناتك.",
+  "continueButton": "متابعة"
 }

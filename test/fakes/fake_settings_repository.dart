@@ -26,4 +26,9 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<void> saveLockTimeoutMinutes(int value) async {
     _settings = _settings.copyWith(lockTimeoutMinutes: value);
   }
+
+  @override
+  Future<void> saveSeenInsecureDeviceWarning(bool value) async {
+    _settings = _settings.copyWith(seenInsecureDeviceWarning: value);
+  }
 }

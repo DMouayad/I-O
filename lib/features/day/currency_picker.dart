@@ -7,10 +7,16 @@ class CurrencyPicker extends StatelessWidget {
     super.key,
     required this.value,
     required this.onChanged,
+    this.flush = false,
   });
 
   final String value;
   final ValueChanged<String> onChanged;
+
+  /// When true, renders without its own background/border — for embedding
+  /// directly inside another surface (e.g. the day-screen entry bar) so it
+  /// reads as part of that surface rather than a nested floating chip.
+  final bool flush;
 
   @override
   Widget build(BuildContext context) {
@@ -52,13 +58,15 @@ class CurrencyPicker extends StatelessWidget {
           ),
       ],
       child: Container(
-        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: pal.surfaceHigh,
-          border: Border.all(color: pal.border),
-          borderRadius: BorderRadius.circular(kRadius),
-        ),
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        padding: EdgeInsets.symmetric(horizontal: flush ? 6 : 10, vertical: 8),
+        decoration: flush
+            ? null
+            : BoxDecoration(
+                color: pal.surfaceHigh,
+                border: Border.all(color: pal.border),
+                borderRadius: BorderRadius.circular(kRadius),
+              ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
