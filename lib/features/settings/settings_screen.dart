@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:io/core/theme/palette.dart';
 import 'package:signals_flutter/signals_flutter.dart';
@@ -12,6 +13,34 @@ class SettingsScreen extends StatelessWidget {
   final SettingsController? controller;
 
   SettingsController get _c => controller ?? di.settingsController;
+
+  Future<void> _confirmSeed(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Seed demo data?'),
+        content: const Text(
+          'This deletes all existing transactions and inserts generated demo data.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Seed'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final count = await di.transactionsController.seedYearToDate();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Seeded $count transactions')));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +111,16 @@ class SettingsScreen extends StatelessWidget {
                 ),
               const Divider(),
               ListTile(title: Text(l10n.about), subtitle: const Text('v1.0.0')),
+              // Debug-only: hard-coded strings, no l10n needed.
+              if (kDebugMode) ...[
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.science_outlined),
+                  title: const Text('Seed demo data'),
+                  subtitle: const Text('Replaces all transactions'),
+                  onTap: () => _confirmSeed(context),
+                ),
+              ],
             ],
           );
         },

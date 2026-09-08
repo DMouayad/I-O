@@ -12,6 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   go_router: ^18.0.0
+  google_fonts: ^8.2.1
   intl: ^0.20.2
   local_auth: ^3.0.2
   path: ^1.9.1

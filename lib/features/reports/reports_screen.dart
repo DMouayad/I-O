@@ -3,6 +3,7 @@ import 'package:intl/intl.dart' as intl;
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../core/currency.dart';
+import '../../core/money_format.dart';
 import '../../core/motion.dart';
 import '../../core/theme/palette.dart';
 import '../../di.dart' as di;
@@ -243,7 +244,7 @@ class _ModernTotalsCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${totals.net >= 0 ? '+' : ''}${totals.net.toStringAsFixed(2)} ${currencySymbol(currency)}',
+                '${totals.net >= 0 ? '+' : ''}${formatMoney(totals.net, currency)} ${currencySymbol(currency)}',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -282,12 +283,12 @@ class _ModernTotalsCard extends StatelessWidget {
             children: [
               _metric(
                 l10n.income,
-                '+${totals.income.toStringAsFixed(2)}',
+                '+${formatMoney(totals.income, currency)}',
                 pal.income,
               ),
               _metric(
                 l10n.expense,
-                '-${totals.expense.toStringAsFixed(2)}',
+                '-${formatMoney(totals.expense, currency)}',
                 pal.expense,
               ),
             ],
@@ -412,8 +413,14 @@ class _VisualPayeesCard extends StatelessWidget {
                     ),
                     Text(
                       item.expenseSum > 0
-                          ? item.expenseSum.toStringAsFixed(2)
-                          : item.incomeSum.toStringAsFixed(2),
+                          ? formatMoney(
+                              item.expenseSum,
+                              _dominantCurrency(item.expenseByCurrency),
+                            )
+                          : formatMoney(
+                              item.incomeSum,
+                              _dominantCurrency(item.incomeByCurrency),
+                            ),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -535,4 +542,18 @@ class _PayeeTotal {
 
   double get incomeSum => incomeByCurrency.values.fold(0.0, (a, v) => a + v);
   double get expenseSum => expenseByCurrency.values.fold(0.0, (a, v) => a + v);
+}
+
+/// The payee sums above fold across currencies; format them by whichever
+/// currency contributes the most (exact in the common single-currency case).
+String _dominantCurrency(Map<String, double> byCurrency) {
+  var best = '';
+  var bestAbs = -1.0;
+  byCurrency.forEach((currency, value) {
+    if (value.abs() > bestAbs) {
+      bestAbs = value.abs();
+      best = currency;
+    }
+  });
+  return best;
 }

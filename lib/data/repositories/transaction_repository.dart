@@ -5,6 +5,7 @@ abstract class TransactionRepository {
   Future<int> insert(TransactionModel t);
   Future<int> update(TransactionModel t);
   Future<int> delete(int id);
+  Future<int> deleteAll();
   Future<List<TransactionModel>> getAll();
   Future<List<String>> getPayeeSuggestions({String? query, int limit = 5});
 }
@@ -24,6 +25,9 @@ class SqfliteTransactionRepository implements TransactionRepository {
   @override
   Future<int> delete(int id) =>
       _db.delete('transactions', where: 'id = ?', whereArgs: [id]);
+
+  @override
+  Future<int> deleteAll() => _db.delete('transactions');
 
   @override
   Future<List<TransactionModel>> getAll() async {

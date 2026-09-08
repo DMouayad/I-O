@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' as intl;
 import 'package:io/core/widgets/signed_money_text.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
+import '../../core/currency.dart';
 import '../../core/date_utils.dart';
 import '../../core/money_format.dart';
 import '../../core/theme/palette.dart';
@@ -423,6 +424,9 @@ class _HeroTodayTile extends StatelessWidget {
                     children: [
                       SignedMoneyText(
                         balanceTotals,
+                        multiline: true,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        textAlign: TextAlign.right,
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -449,32 +453,91 @@ class _HeroTodayTile extends StatelessWidget {
                   ),
                 )
               else
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      '+${netTotal(incomeTotals)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: pal.income,
-                      ),
-                    ),
-                    Text('  ·  ', style: TextStyle(color: pal.border)),
-                    Text(
-                      netTotal(expenseTotals).toString(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: pal.expense,
-                      ),
-                    ),
-                  ],
+                _IncomeExpenseBreakdown(
+                  incomeTotals: incomeTotals,
+                  expenseTotals: expenseTotals,
                 ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Per-currency income/expense breakdown ────────────────────────────────────
+
+/// Right-aligned compact breakdown for the hero tile: one row per currency
+/// pairing that day's income and expense (`+X CUR · −Y CUR`), omitting the
+/// side a currency has no transactions on. Single-currency days render a
+/// single row, matching the old one-line look (now with currency symbols —
+/// the previous `netTotal` sums were wrong for multi-currency days).
+class _IncomeExpenseBreakdown extends StatelessWidget {
+  const _IncomeExpenseBreakdown({
+    required this.incomeTotals,
+    required this.expenseTotals,
+  });
+
+  final Map<String, double> incomeTotals;
+  final Map<String, double> expenseTotals;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final incomeStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: pal.income,
+      height: 1.15,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    final expenseStyle = incomeStyle.copyWith(color: pal.expense);
+    final separatorStyle = TextStyle(
+      fontSize: 12,
+      height: 1.15,
+      color: pal.border,
+    );
+
+    final entries = <String, ({double income, double expense})>{
+      for (final cur in {...incomeTotals.keys, ...expenseTotals.keys})
+        cur: (income: incomeTotals[cur] ?? 0, expense: expenseTotals[cur] ?? 0),
+    }.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
+    entries.removeWhere((e) => e.value.income == 0 && e.value.expense == 0);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (var i = 0; i < entries.length; i++) ...[
+          if (i > 0) const SizedBox(height: 1),
+          Text.rich(
+            TextSpan(
+              children: [
+                if (entries[i].value.income != 0)
+                  TextSpan(
+                    text:
+                        '+${formatMoney(entries[i].value.income, entries[i].key)} '
+                        '${currencySymbol(entries[i].key)}',
+                    style: incomeStyle,
+                  ),
+                if (entries[i].value.income != 0 &&
+                    entries[i].value.expense != 0)
+                  TextSpan(text: '  ·  ', style: separatorStyle),
+                if (entries[i].value.expense != 0)
+                  TextSpan(
+                    text:
+                        '−${formatMoney(entries[i].value.expense.abs(), entries[i].key)} '
+                        '${currencySymbol(entries[i].key)}',
+                    style: expenseStyle,
+                  ),
+              ],
+            ),
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
     );
   }
 }
@@ -490,11 +553,10 @@ class _DayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pal = context.pal;
-    final label = intl.DateFormat.yMMMd(
+    final label = intl.DateFormat.MEd(
       Localizations.localeOf(context).languageCode,
     ).format(day);
 
-    final txCount = di.reportsController.transactionsForDay(day).length;
     final totals = di.reportsController.totalsForDay(
       day,
     ); // net, already signed
@@ -524,33 +586,14 @@ class _DayRow extends StatelessWidget {
                         color: pal.text,
                       ),
                     ),
-                    if (txCount > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: pal.bg,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: pal.border),
-                        ),
-                        child: Text(
-                          '$txCount',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: pal.textMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
               SignedMoneyText(
                 totals,
+                multiline: true,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                textAlign: TextAlign.right,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,

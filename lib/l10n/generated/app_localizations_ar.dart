@@ -137,4 +137,48 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get continueButton => 'متابعة';
+
+  @override
+  String get swapTitle => 'تبديل العملات';
+
+  @override
+  String get swapRateLabel => 'سعر اليوم';
+
+  @override
+  String swapRateHelper(String quote, String base) {
+    return 'كم $quote مقابل 1 $base';
+  }
+
+  @override
+  String get swapAmountLabel => 'المبلغ المراد تبديله';
+
+  @override
+  String get swapConfirm => 'بدّل';
+
+  @override
+  String get swapFrom => 'من';
+
+  @override
+  String get swapTo => 'إلى';
+
+  @override
+  String get swapInvalidRate => 'أدخل سعرًا صحيحًا أكبر من الصفر';
+
+  @override
+  String swapExceedsTotal(String available) {
+    return 'يتجاوز المتاح $available';
+  }
+
+  @override
+  String swapSaved(String from, String to) {
+    return 'تم تبديل $from إلى $to';
+  }
+
+  @override
+  String swapEmptySource(String bucket, String currency) {
+    return 'لا يوجد $bucket بـ$currency للتبديل بعد';
+  }
+
+  @override
+  String get swapPayee => 'تبديل عملة';
 }

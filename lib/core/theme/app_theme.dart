@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'palette.dart';
 
@@ -37,50 +38,15 @@ ThemeData themeFor(AppPalette p) {
     extensions: [p],
 
     // ── Typography — one scale, tight tracking on headings ──────────────
-    textTheme: Typography.material2021().black
-        .apply(bodyColor: p.text, displayColor: p.text)
-        .copyWith(
-          headlineMedium: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-            height: 1.2,
-          ),
-          titleLarge: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-            height: 1.3,
-          ),
-          titleMedium: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
-            height: 1.4,
-          ),
-          titleSmall: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.1,
-            height: 1.4,
-          ),
-          bodyLarge: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          bodyMedium: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          bodySmall: TextStyle(fontSize: 12, color: p.textMuted, height: 1.4),
-          labelLarge: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
-          ),
-        ),
+    // Trial: Chivo Mono across the text theme (amounts inherit it since
+    // their styles don't set a font family). Swap the single call below
+    // to try the next candidate.
+    textTheme: GoogleFonts.geistTextTheme(
+      Typography.material2021().black.apply(
+        bodyColor: p.text,
+        displayColor: p.text,
+      ),
+    ),
 
     iconTheme: IconThemeData(color: p.text, size: 24),
 

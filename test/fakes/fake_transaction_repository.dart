@@ -26,6 +26,13 @@ class FakeTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<int> deleteAll() async {
+    final count = _items.length;
+    _items.clear();
+    return count;
+  }
+
+  @override
   Future<List<TransactionModel>> getAll() async {
     final copy = List<TransactionModel>.of(_items);
     copy.sort((a, b) => b.date.compareTo(a.date));

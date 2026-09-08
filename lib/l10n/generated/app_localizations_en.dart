@@ -137,4 +137,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get continueButton => 'Continue';
+
+  @override
+  String get swapTitle => 'Swap currencies';
+
+  @override
+  String get swapRateLabel => 'Today\'s rate';
+
+  @override
+  String swapRateHelper(String quote, String base) {
+    return 'How many $quote per 1 $base';
+  }
+
+  @override
+  String get swapAmountLabel => 'Amount to swap';
+
+  @override
+  String get swapConfirm => 'Swap';
+
+  @override
+  String get swapFrom => 'From';
+
+  @override
+  String get swapTo => 'To';
+
+  @override
+  String get swapInvalidRate => 'Enter a valid rate above zero';
+
+  @override
+  String swapExceedsTotal(String available) {
+    return 'Exceeds available $available';
+  }
+
+  @override
+  String swapSaved(String from, String to) {
+    return 'Swapped $from → $to';
+  }
+
+  @override
+  String swapEmptySource(String bucket, String currency) {
+    return 'No $bucket in $currency to swap yet';
+  }
+
+  @override
+  String get swapPayee => 'Exchange';
 }

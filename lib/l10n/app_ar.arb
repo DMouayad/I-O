@@ -42,5 +42,21 @@
   "authFailed": "فشلت المصادقة — حاول مجددًا",
   "noDeviceLockTitle": "لا يوجد قفل على الجهاز",
   "noDeviceLockMessage": "هذا الجهاز لا يحتوي على رمز PIN أو بصمة، لذلك سيُفتح التطبيق دون مصادقة. عيّن قفل شاشة لحماية بياناتك.",
-  "continueButton": "متابعة"
+  "continueButton": "متابعة",
+  "swapTitle": "تبديل العملات",
+  "swapRateLabel": "سعر اليوم",
+  "swapRateHelper": "كم {quote} مقابل 1 {base}",
+  "@swapRateHelper": { "placeholders": { "quote": { "type": "String" }, "base": { "type": "String" } } },
+  "swapAmountLabel": "المبلغ المراد تبديله",
+  "swapConfirm": "بدّل",
+  "swapFrom": "من",
+  "swapTo": "إلى",
+  "swapInvalidRate": "أدخل سعرًا صحيحًا أكبر من الصفر",
+  "swapExceedsTotal": "يتجاوز المتاح {available}",
+  "@swapExceedsTotal": { "placeholders": { "available": { "type": "String" } } },
+  "swapSaved": "تم تبديل {from} إلى {to}",
+  "@swapSaved": { "placeholders": { "from": { "type": "String" }, "to": { "type": "String" } } },
+  "swapEmptySource": "لا يوجد {bucket} بـ{currency} للتبديل بعد",
+  "@swapEmptySource": { "placeholders": { "bucket": { "type": "String" }, "currency": { "type": "String" } } },
+  "swapPayee": "تبديل عملة"
 }

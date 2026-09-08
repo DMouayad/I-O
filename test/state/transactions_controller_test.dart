@@ -37,4 +37,36 @@ void main() {
     await controller.remove(id);
     expect(controller.transactions.value, isEmpty);
   });
+
+  test('seedYearToDate wipes existing and inserts demo data', () async {
+    final controller = TransactionsController(FakeTransactionRepository());
+    await controller.add(
+      TransactionModel(
+        type: TransactionType.expense,
+        amount: 30,
+        currency: 'USD',
+        date: DateTime.now(),
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    final count = await controller.seedYearToDate();
+    expect(count, greaterThan(100));
+    expect(controller.transactions.value.length, count);
+    // The manually added transaction is gone (wiped).
+    expect(controller.transactions.value.any((t) => t.amount == 30), isFalse);
+    // Roughly 90/10 SYP/USD split.
+    final syp = controller.transactions.value
+        .where((t) => t.currency == 'SYP')
+        .length;
+    expect(syp / count, inInclusiveRange(0.8, 0.98));
+  });
+
+  test('seedYearToDate appends when wipe is false', () async {
+    final controller = TransactionsController(FakeTransactionRepository());
+    await controller.seedYearToDate();
+    final first = controller.transactions.value.length;
+    final added = await controller.seedYearToDate(wipe: false);
+    expect(controller.transactions.value.length, first + added);
+  });
 }

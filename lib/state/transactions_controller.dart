@@ -1,4 +1,5 @@
 import 'package:signals_flutter/signals_flutter.dart';
+import '../data/dev_seed.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../models/transaction_model.dart';
 
@@ -31,6 +32,19 @@ class TransactionsController {
   Future<void> update(TransactionModel t) async {
     await _repo.update(t);
     await load();
+  }
+
+  /// Dev-only: replaces (or appends to) all transactions with generated
+  /// demo data for the current year. Returns the inserted count.
+  Future<int> seedYearToDate({int seed = 42, bool wipe = true}) async {
+    final now = DateTime.now();
+    final rows = generateYearToDate(year: now.year, today: now, seed: seed);
+    if (wipe) await _repo.deleteAll();
+    for (final t in rows) {
+      await _repo.insert(t);
+    }
+    await load();
+    return rows.length;
   }
 
   /// Sync suggestions for Autocomplete (filters in-memory, ordered by recency).

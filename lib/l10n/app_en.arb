@@ -42,5 +42,21 @@
   "authFailed": "Authentication failed — please try again",
   "noDeviceLockTitle": "No device lock set",
   "noDeviceLockMessage": "This device has no PIN or biometrics, so the app will open without authentication. Set a screen lock to protect your data.",
-  "continueButton": "Continue"
+  "continueButton": "Continue",
+  "swapTitle": "Swap currencies",
+  "swapRateLabel": "Today''s rate",
+  "swapRateHelper": "How many {quote} per 1 {base}",
+  "@swapRateHelper": { "placeholders": { "quote": { "type": "String" }, "base": { "type": "String" } } },
+  "swapAmountLabel": "Amount to swap",
+  "swapConfirm": "Swap",
+  "swapFrom": "From",
+  "swapTo": "To",
+  "swapInvalidRate": "Enter a valid rate above zero",
+  "swapExceedsTotal": "Exceeds available {available}",
+  "@swapExceedsTotal": { "placeholders": { "available": { "type": "String" } } },
+  "swapSaved": "Swapped {from} → {to}",
+  "@swapSaved": { "placeholders": { "from": { "type": "String" }, "to": { "type": "String" } } },
+  "swapEmptySource": "No {bucket} in {currency} to swap yet",
+  "@swapEmptySource": { "placeholders": { "bucket": { "type": "String" }, "currency": { "type": "String" } } },
+  "swapPayee": "Exchange"
 }

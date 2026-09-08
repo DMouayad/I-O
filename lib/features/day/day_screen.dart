@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' as semantics;
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../core/currency.dart';
+import '../../core/date_utils.dart';
 import '../../core/money_format.dart';
 import '../../core/theme/palette.dart';
 import '../../core/toast.dart';
@@ -67,7 +69,7 @@ class _DayScreenState extends State<DayScreen>
       showTopToast(
         context,
         message: l10n.savedWithAmount(
-          '${amount.toStringAsFixed(2)} ${currencySymbol(currency)}',
+          '${formatMoney(amount, currency)} ${currencySymbol(currency)}',
         ),
         actionLabel: l10n.undo,
         onAction: () => di.transactionsController.remove(id),
@@ -83,7 +85,7 @@ class _DayScreenState extends State<DayScreen>
     showTopToast(
       context,
       message: l10n.deletedWithAmount(
-        '${t.amount.toStringAsFixed(2)} ${t.currency}',
+        '${formatMoney(t.amount, t.currency)} ${t.currency}',
       ),
       actionLabel: l10n.undo,
       onAction: () => di.transactionsController.add(t),
@@ -125,85 +127,103 @@ class _DayScreenState extends State<DayScreen>
   @override
   Widget build(BuildContext context) {
     final pal = context.pal;
+    final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).languageCode;
-    final isToday = DateUtils.isSameDay(_day, DateTime.now());
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        backgroundColor: pal.surfaceHigh,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              DateFormat.E(locale).format(_day).toUpperCase(),
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                color: isToday ? pal.primary : pal.textMuted,
-              ),
+    // The whole Scaffold rebuilds on groupedByDay changes: Scaffold fixes
+    // the app bar height from `bottom.preferredSize` when the AppBar is
+    // constructed, so the AppBar itself must be rebuilt (with the matching
+    // summary height) whenever the day's totals change. Entry-bar and tab
+    // state live in child States, so this rebuild doesn't lose input.
+    return SignalBuilder(
+      dependencies: [di.reportsController.groupedByDay],
+      builder: (_) {
+        final totals = _dayTotals();
+        final rows = _summaryRowCount(totals.income, totals.expense);
+        return Scaffold(
+          resizeToAvoidBottomInset: true,
+          appBar: AppBar(
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            backgroundColor: pal.surfaceHigh,
+            centerTitle: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
-            const SizedBox(width: 4),
-            Text(
-              DateFormat.yMMMd(locale).format(_day),
+            title: Text(
+              DateFormat.yMEd(locale).format(_day),
               style: TextStyle(
                 fontSize: 15,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 color: pal.text,
               ),
             ),
-          ],
-        ),
-        // Extends the AppBar's own Material surface downward so the title
-        // row and the day summary read as a single header block.
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(42),
-          child: SignalBuilder(
-            dependencies: [di.reportsController.groupedByDay],
-            builder: (_) {
-              final totals = _dayTotals();
-              return _DaySummaryStrip(
+            actions: [
+              IconButton(
+                tooltip: l10n.swapTitle,
+                icon: const Icon(Icons.currency_exchange, size: 20),
+                onPressed: () => context.push('/day/${isoDate(_day)}/swap'),
+              ),
+            ],
+            // Extends the AppBar's own Material surface downward so the title
+            // row and the day summary read as a single header block. Height
+            // grows with the tallest per-currency column (one row per
+            // currency, ~18px each) so multi-currency days stack compactly
+            // instead of squeezing into a single line.
+            bottom: PreferredSize(
+              preferredSize: Size.fromHeight(42 + (rows - 1) * 18),
+              child: _DaySummaryStrip(
                 income: totals.income,
                 expense: totals.expense,
-              );
-            },
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _TypeTabBar(controller: _tabController),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  for (final type in _tabTypes)
-                    _DayTransactionList(
-                      day: _day,
-                      type: type,
-                      onTapTransaction: _openEditSheet,
-                      onDeleted: _showDeletedToast,
-                    ),
-                ],
               ),
             ),
-            _CompactEntryBar(
-              tabController: _tabController,
-              onAdd: _addTransaction,
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _TypeTabBar(controller: _tabController),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      for (final type in _tabTypes)
+                        _DayTransactionList(
+                          day: _day,
+                          type: type,
+                          onTapTransaction: _openEditSheet,
+                          onDeleted: _showDeletedToast,
+                        ),
+                    ],
+                  ),
+                ),
+                _CompactEntryBar(
+                  tabController: _tabController,
+                  onAdd: _addTransaction,
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
+  }
+
+  /// Tallest per-currency column (income / expense / net balance), at
+  /// least 1. Mirrors the balance filtering in [_DaySummaryStrip].
+  int _summaryRowCount(
+    Map<String, double> income,
+    Map<String, double> expense,
+  ) {
+    var rows = 1;
+    if (income.length > rows) rows = income.length;
+    if (expense.length > rows) rows = expense.length;
+    var balanceRows = 0;
+    for (final cur in {...income.keys, ...expense.keys}) {
+      if ((income[cur] ?? 0) - (expense[cur] ?? 0) != 0) balanceRows++;
+    }
+    if (balanceRows > rows) rows = balanceRows;
+    return rows;
   }
 }
 
@@ -266,36 +286,39 @@ class _DaySummaryStrip extends StatelessWidget {
     final pal = context.pal;
     final l10n = AppLocalizations.of(context);
 
+    final currencies = {...income.keys, ...expense.keys}.toList()..sort();
+
     final balance = <String, double>{
-      for (final cur in {...income.keys, ...expense.keys})
+      for (final cur in currencies)
         cur: (income[cur] ?? 0) - (expense[cur] ?? 0),
     };
 
-    final incomeText = formatMoneyMap(income);
-    final expenseText = formatMoneyMap(expense, signed: false);
-    final balanceText = formatMoneyMap(balance);
-
     return Semantics(
       label:
-          '${l10n.income} $incomeText. '
-          '${l10n.expense} $expenseText. '
-          '${l10n.balance} $balanceText.',
+          '${l10n.income} ${formatMoneyMap(income)}. '
+          '${l10n.expense} ${formatMoneyMap(expense, signed: false)}. '
+          '${l10n.balance} ${formatMoneyMap(balance)}.',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Row(
-              children: [
-                _stat(incomeText, pal.income),
-                _divider(pal),
-                _stat(
-                  expenseText == '0.00' ? expenseText : '−$expenseText',
-                  pal.expense,
-                ),
-                _divider(pal),
-                _stat('= $balanceText', pal.text),
-              ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: currencies.isEmpty
+                  ? [_row(pal, null, 0, 0, multi: false)]
+                  : [
+                      for (var i = 0; i < currencies.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 4),
+                        _row(
+                          pal,
+                          currencies[i],
+                          income[currencies[i]] ?? 0,
+                          expense[currencies[i]] ?? 0,
+                          multi: currencies.length > 1,
+                        ),
+                      ],
+                    ],
             ),
           ),
           Divider(height: 1, thickness: 1, color: pal.border),
@@ -304,32 +327,80 @@ class _DaySummaryStrip extends StatelessWidget {
     );
   }
 
-  Widget _divider(AppPalette pal) => Container(
-    width: 1.5,
-    height: 20,
-    margin: const EdgeInsets.symmetric(horizontal: 4),
-    color: pal.border,
-  );
+  /// One row per currency: income / expense / balance cells side by side,
+  /// so multi-currency days stay aligned instead of stacking independently
+  /// per stat (which broke alignment when currencies differed per stat).
+  Widget _row(
+    AppPalette pal,
+    String? currency,
+    double incomeVal,
+    double expenseVal, {
+    required bool multi,
+  }) {
+    final fontSize = multi ? 13.0 : 15.0;
+    TextStyle style(Color color) => TextStyle(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w800,
+      color: color,
+      height: 1.15,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
 
-  Widget _stat(String value, Color color) {
-    return Expanded(
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
+    Widget cell(String text, Color color) => Flexible(
+      child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(
-          value,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: color,
-            fontFeatures: const [FontFeature.tabularFigures()],
+        child: FittedBox(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style(color),
           ),
         ),
       ),
     );
+
+    if (currency == null) {
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            cell('0', pal.income),
+            _divider(pal),
+            cell('0', pal.expense),
+            _divider(pal),
+            cell('0', pal.text),
+          ],
+        ),
+      );
+    }
+
+    final balanceVal = incomeVal - expenseVal;
+    final sym = currencySymbol(currency);
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          cell('+${formatMoney(incomeVal, currency)} $sym', pal.income),
+          _divider(pal),
+          cell('−${formatMoney(expenseVal, currency)} $sym', pal.expense),
+          _divider(pal),
+          cell(
+            '= ${balanceVal < 0 ? '−' : '+'}${formatMoney(balanceVal.abs(), currency)} $sym',
+            pal.text,
+          ),
+        ],
+      ),
+    );
   }
-}
-// ── Transaction list ─────────────────────────────────────────────────────────
+
+  Widget _divider(AppPalette pal) => Container(
+    width: 1.5,
+    margin: const EdgeInsets.symmetric(horizontal: 4),
+    color: pal.border,
+  );
+} // ── Transaction list ─────────────────────────────────────────────────────────
 
 class _DayTransactionList extends StatelessWidget {
   const _DayTransactionList({
@@ -373,28 +444,9 @@ class _DayTransactionList extends StatelessWidget {
           separatorBuilder: (_, _) => const SizedBox(height: 6),
           itemBuilder: (context, i) {
             final t = list[i];
-            return Dismissible(
-              key: ValueKey(t.id),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 16),
-                decoration: BoxDecoration(
-                  color: pal.expenseSoft,
-                  borderRadius: BorderRadius.circular(kRadius),
-                ),
-                child: Icon(Icons.delete_outline, color: pal.expense, size: 22),
-              ),
-              onDismissed: (_) {
-                final id = t.id;
-                if (id == null) return;
-                di.transactionsController.remove(id);
-                onDeleted(t);
-              },
-              child: _CompactTxRow(
-                transaction: t,
-                onTap: () => onTapTransaction(t),
-              ),
+            return _CompactTxRow(
+              transaction: t,
+              onTap: () => onTapTransaction(t),
             );
           },
         );
@@ -445,7 +497,7 @@ class _CompactTxRow extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '${isIncome ? '+' : '-'}${transaction.amount.toStringAsFixed(2)} ${currencySymbol(transaction.currency)}',
+                '${isIncome ? '+' : '-'}${formatMoney(transaction.amount, transaction.currency)} ${currencySymbol(transaction.currency)}',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,

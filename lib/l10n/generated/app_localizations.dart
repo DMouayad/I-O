@@ -343,6 +343,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue'**
   String get continueButton;
+
+  /// No description provided for @swapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap currencies'**
+  String get swapTitle;
+
+  /// No description provided for @swapRateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'\'s rate'**
+  String get swapRateLabel;
+
+  /// No description provided for @swapRateHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'How many {quote} per 1 {base}'**
+  String swapRateHelper(String quote, String base);
+
+  /// No description provided for @swapAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount to swap'**
+  String get swapAmountLabel;
+
+  /// No description provided for @swapConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap'**
+  String get swapConfirm;
+
+  /// No description provided for @swapFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get swapFrom;
+
+  /// No description provided for @swapTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get swapTo;
+
+  /// No description provided for @swapInvalidRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid rate above zero'**
+  String get swapInvalidRate;
+
+  /// No description provided for @swapExceedsTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Exceeds available {available}'**
+  String swapExceedsTotal(String available);
+
+  /// No description provided for @swapSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Swapped {from} → {to}'**
+  String swapSaved(String from, String to);
+
+  /// No description provided for @swapEmptySource.
+  ///
+  /// In en, this message translates to:
+  /// **'No {bucket} in {currency} to swap yet'**
+  String swapEmptySource(String bucket, String currency);
+
+  /// No description provided for @swapPayee.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchange'**
+  String get swapPayee;
 }
 
 class _AppLocalizationsDelegate

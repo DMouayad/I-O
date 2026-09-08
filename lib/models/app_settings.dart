@@ -10,12 +10,17 @@ class AppSettings {
   /// Guards the insecure auto-allow path so it warns exactly once ever.
   final bool seenInsecureDeviceWarning;
 
+  /// Last used USD→SYP swap rate, pre-filled on the swap screen. Null when
+  /// the user never swapped.
+  final double? lastSwapRate;
+
   const AppSettings({
     this.languageCode = 'en',
     this.defaultCurrency = 'USD',
     this.biometricEnabled = true,
     this.lockTimeoutMinutes = 5,
     this.seenInsecureDeviceWarning = false,
+    this.lastSwapRate,
   });
 
   AppSettings copyWith({
@@ -24,6 +29,7 @@ class AppSettings {
     bool? biometricEnabled,
     int? lockTimeoutMinutes,
     bool? seenInsecureDeviceWarning,
+    double? lastSwapRate,
   }) {
     return AppSettings(
       languageCode: languageCode ?? this.languageCode,
@@ -32,6 +38,7 @@ class AppSettings {
       lockTimeoutMinutes: lockTimeoutMinutes ?? this.lockTimeoutMinutes,
       seenInsecureDeviceWarning:
           seenInsecureDeviceWarning ?? this.seenInsecureDeviceWarning,
+      lastSwapRate: lastSwapRate ?? this.lastSwapRate,
     );
   }
 }

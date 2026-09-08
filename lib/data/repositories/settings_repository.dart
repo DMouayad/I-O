@@ -8,6 +8,7 @@ abstract class SettingsRepository {
   Future<void> saveBiometricEnabled(bool value);
   Future<void> saveLockTimeoutMinutes(int value);
   Future<void> saveSeenInsecureDeviceWarning(bool value);
+  Future<void> saveLastSwapRate(double value);
 }
 
 class SharedPrefsSettingsRepository implements SettingsRepository {
@@ -19,6 +20,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const _kBio = 'biometric_enabled';
   static const _kLockTimeout = 'lock_timeout_minutes';
   static const _kInsecureWarning = 'seen_insecure_device_warning';
+  static const _kLastSwapRate = 'last_swap_rate';
 
   @override
   AppSettings load() => AppSettings(
@@ -27,6 +29,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
     biometricEnabled: _prefs.getBool(_kBio) ?? true,
     lockTimeoutMinutes: _sanitizeTimeout(_prefs.getInt(_kLockTimeout)),
     seenInsecureDeviceWarning: _prefs.getBool(_kInsecureWarning) ?? false,
+    lastSwapRate: _prefs.getDouble(_kLastSwapRate),
   );
 
   @override
@@ -46,6 +49,10 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveSeenInsecureDeviceWarning(bool value) =>
       _prefs.setBool(_kInsecureWarning, value);
+
+  @override
+  Future<void> saveLastSwapRate(double value) =>
+      _prefs.setDouble(_kLastSwapRate, value);
 }
 
 /// Guards against corrupt/legacy stored values (e.g. 0 from another version).

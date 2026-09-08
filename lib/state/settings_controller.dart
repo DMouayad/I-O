@@ -35,4 +35,9 @@ class SettingsController {
     await _repo.saveSeenInsecureDeviceWarning(value);
     settings.value = settings.value.copyWith(seenInsecureDeviceWarning: value);
   }
+
+  Future<void> setLastSwapRate(double value) async {
+    await _repo.saveLastSwapRate(value);
+    settings.value = settings.value.copyWith(lastSwapRate: value);
+  }
 }

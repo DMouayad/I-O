@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' as semantics;
 import 'package:flutter/services.dart';
 import 'package:io/core/currency.dart';
+import 'package:io/core/money_format.dart';
 import 'package:io/core/theme/palette.dart';
 import 'package:io/di.dart' as di;
 import 'package:io/l10n/generated/app_localizations.dart';
@@ -40,7 +41,7 @@ class _EditSheetState extends State<EditSheet> {
   void initState() {
     super.initState();
     _amountCtrl = TextEditingController(
-      text: widget.transaction.amount.toStringAsFixed(2),
+      text: formatMoney(widget.transaction.amount, widget.transaction.currency),
     );
     _payeeCtrl = TextEditingController(text: widget.transaction.payee ?? '');
     _currency = widget.transaction.currency;
