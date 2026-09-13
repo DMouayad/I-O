@@ -33,6 +33,20 @@ class FakeTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<int> deleteByDay(DateTime day, {TransactionType? type}) async {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    final before = _items.length;
+    _items.removeWhere(
+      (e) =>
+          !e.date.isBefore(start) &&
+          e.date.isBefore(end) &&
+          (type == null || e.type == type),
+    );
+    return before - _items.length;
+  }
+
+  @override
   Future<List<TransactionModel>> getAll() async {
     final copy = List<TransactionModel>.of(_items);
     copy.sort((a, b) => b.date.compareTo(a.date));

@@ -117,4 +117,62 @@ void main() {
     final filtered = await repo.getPayeeSuggestions(query: 'ahm');
     expect(filtered, ['Ahmed']);
   });
+
+  test('deleteByDay removes only that calendar day', () async {
+    Future<void> addOn(DateTime date) => repo.insert(
+      TransactionModel(
+        type: TransactionType.expense,
+        amount: 1,
+        currency: 'USD',
+        date: date,
+        createdAt: date,
+      ),
+    );
+    await addOn(DateTime(2024, 5, 12, 23, 59));
+    await addOn(DateTime(2024, 5, 13, 0, 0));
+    await addOn(DateTime(2024, 5, 13, 12, 0));
+    await addOn(DateTime(2024, 5, 14, 0, 0));
+
+    final removed = await repo.deleteByDay(DateTime(2024, 5, 13));
+    expect(removed, 2);
+
+    final remaining = await repo.getAll();
+    expect(remaining.length, 2);
+    expect(
+      remaining.map((t) => t.date).every((d) => d.day == 12 || d.day == 14),
+      isTrue,
+    );
+  });
+
+  test('deleteByDay with type removes only that tab slice', () async {
+    final day = DateTime(2024, 5, 13, 10, 0);
+    await repo.insert(
+      TransactionModel(
+        type: TransactionType.income,
+        amount: 100,
+        currency: 'USD',
+        date: day,
+        createdAt: day,
+      ),
+    );
+    await repo.insert(
+      TransactionModel(
+        type: TransactionType.expense,
+        amount: 40,
+        currency: 'USD',
+        date: day,
+        createdAt: day,
+      ),
+    );
+
+    final removed = await repo.deleteByDay(
+      DateTime(2024, 5, 13),
+      type: TransactionType.expense,
+    );
+    expect(removed, 1);
+
+    final remaining = await repo.getAll();
+    expect(remaining.length, 1);
+    expect(remaining.first.type, TransactionType.income);
+  });
 }

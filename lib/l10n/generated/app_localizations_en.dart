@@ -89,6 +89,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get delete => 'Delete';
 
   @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get deleteDay => 'Delete day…';
+
+  @override
+  String get deleteDayTitle => 'Delete transactions?';
+
+  @override
+  String get deleteScopeDay => 'Whole day';
+
+  @override
+  String deletedCount(int count) {
+    return 'Deleted $count transactions';
+  }
+
+  @override
   String deletedWithAmount(String amount) {
     return 'Deleted $amount';
   }

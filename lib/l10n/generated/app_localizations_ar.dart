@@ -89,6 +89,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get delete => 'حذف';
 
   @override
+  String get cancel => 'إلغاء';
+
+  @override
+  String get deleteDay => 'حذف معاملات اليوم…';
+
+  @override
+  String get deleteDayTitle => 'حذف المعاملات؟';
+
+  @override
+  String get deleteScopeDay => 'اليوم كله';
+
+  @override
+  String deletedCount(int count) {
+    return 'تم حذف $count من المعاملات';
+  }
+
+  @override
   String deletedWithAmount(String amount) {
     return 'تم حذف $amount';
   }

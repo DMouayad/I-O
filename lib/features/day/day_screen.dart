@@ -103,6 +103,50 @@ class _DayScreenState extends State<DayScreen>
     );
   }
 
+  /// Bulk delete: one icon → confirm dialog with scope choice (current tab
+  /// pre-selected) → toast with Undo. Scope `null` means the whole day.
+  Future<void> _confirmDeleteDay() async {
+    final initialType = _currentType;
+    final incomeCount = di.reportsController
+        .transactionsForDayAndType(_day, TransactionType.income)
+        .length;
+    final expenseCount = di.reportsController
+        .transactionsForDayAndType(_day, TransactionType.expense)
+        .length;
+    final dayCount = incomeCount + expenseCount;
+    if (dayCount == 0 || !mounted) return;
+
+    final tabCount = initialType == TransactionType.income
+        ? incomeCount
+        : expenseCount;
+    final result = await showDialog<({bool confirmed, TransactionType? scope})>(
+      context: context,
+      builder: (ctx) => _DeleteDayDialog(
+        initialScope: tabCount > 0 ? initialType : null,
+        incomeCount: incomeCount,
+        expenseCount: expenseCount,
+        dayCount: dayCount,
+      ),
+    );
+    if (result?.confirmed != true || !mounted) return;
+
+    final snapshot = await di.transactionsController.removeDay(
+      _day,
+      type: result!.scope,
+    );
+    if (!mounted || snapshot.isEmpty) return;
+    final captured = List<TransactionModel>.of(snapshot);
+    final l10n = AppLocalizations.of(context);
+    showTopToast(
+      context,
+      message: l10n.deletedCount(captured.length),
+      actionLabel: l10n.undo,
+      onAction: () {
+        di.transactionsController.restoreAll(captured);
+      },
+    );
+  }
+
   ({Map<String, double> income, Map<String, double> expense}) _dayTotals() {
     final income = di.reportsController.totalsForDay(
       _day,
@@ -140,6 +184,7 @@ class _DayScreenState extends State<DayScreen>
       builder: (_) {
         final totals = _dayTotals();
         final rows = _summaryRowCount(totals.income, totals.expense);
+        final dayTxCount = di.reportsController.transactionsForDay(_day).length;
         return Scaffold(
           resizeToAvoidBottomInset: true,
           appBar: AppBar(
@@ -164,6 +209,11 @@ class _DayScreenState extends State<DayScreen>
                 tooltip: l10n.swapTitle,
                 icon: const Icon(Icons.currency_exchange, size: 20),
                 onPressed: () => context.push('/day/${isoDate(_day)}/swap'),
+              ),
+              IconButton(
+                tooltip: l10n.deleteDay,
+                icon: const Icon(Icons.delete_outline, size: 20),
+                onPressed: dayTxCount == 0 ? null : _confirmDeleteDay,
               ),
             ],
             // Extends the AppBar's own Material surface downward so the title
@@ -224,6 +274,78 @@ class _DayScreenState extends State<DayScreen>
     }
     if (balanceRows > rows) rows = balanceRows;
     return rows;
+  }
+}
+
+class _DeleteDayDialog extends StatefulWidget {
+  const _DeleteDayDialog({
+    required this.initialScope,
+    required this.incomeCount,
+    required this.expenseCount,
+    required this.dayCount,
+  });
+
+  /// Pre-selected scope: the current tab, or `null` (whole day) when the
+  /// current tab is empty. `null` scope always means the whole day.
+  final TransactionType? initialScope;
+  final int incomeCount;
+  final int expenseCount;
+  final int dayCount;
+
+  @override
+  State<_DeleteDayDialog> createState() => _DeleteDayDialogState();
+}
+
+class _DeleteDayDialogState extends State<_DeleteDayDialog> {
+  late TransactionType? _scope = widget.initialScope;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final l10n = AppLocalizations.of(context);
+
+    return AlertDialog(
+      title: Text(l10n.deleteDayTitle),
+      // contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      content: SegmentedButton<TransactionType?>(
+        segments: [
+          ButtonSegment(
+            value: TransactionType.income,
+            enabled: widget.incomeCount > 0,
+            label: Text('${l10n.income} (${widget.incomeCount})'),
+          ),
+          ButtonSegment(
+            value: TransactionType.expense,
+            enabled: widget.expenseCount > 0,
+            label: Text('${l10n.expense} (${widget.expenseCount})'),
+          ),
+          ButtonSegment(
+            value: null,
+            label: Text('${l10n.deleteScopeDay} (${widget.dayCount})'),
+          ),
+        ],
+        selected: {_scope},
+        onSelectionChanged: (s) => setState(() => _scope = s.first),
+        showSelectedIcon: false,
+        style: SegmentedButton.styleFrom(visualDensity: VisualDensity.standard),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () =>
+              Navigator.of(context).pop((confirmed: false, scope: _scope)),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: pal.expense,
+            foregroundColor: pal.onPrimary,
+          ),
+          onPressed: () =>
+              Navigator.of(context).pop((confirmed: true, scope: _scope)),
+          child: Text(l10n.delete),
+        ),
+      ],
+    );
   }
 }
 
@@ -607,7 +729,7 @@ class _CompactEntryBarState extends State<_CompactEntryBar> {
           Row(
             children: [
               CurrencyPicker(
-                value: _currency,
+                value: currencySymbol(_currency),
                 onChanged: (v) => setState(() => _currency = v),
                 flush: true,
               ),

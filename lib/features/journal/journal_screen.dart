@@ -42,8 +42,18 @@ class _JournalScreenState extends State<JournalScreen> {
                   : Icons.calendar_month_outlined,
               size: 20,
             ),
-            onPressed: () =>
-                setState(() => _calendarExpanded = !_calendarExpanded),
+            onPressed: () => setState(() {
+              _calendarExpanded = !_calendarExpanded;
+              if (_calendarExpanded) {
+                // The stored month goes stale while the calendar is hidden —
+                // reopen on the newest active month so it matches the list.
+                final txDays = di.reportsController.txDays.value;
+                final anchor = txDays.isEmpty
+                    ? dateOnly(DateTime.now())
+                    : txDays.first;
+                _month = DateTime(anchor.year, anchor.month);
+              }
+            }),
           ),
         ],
       ),
@@ -78,7 +88,6 @@ class _JournalScreenState extends State<JournalScreen> {
                 child: _DayList(
                   days: days,
                   today: today,
-                  showEmptyHint: activeDays.isEmpty,
                   onTapDay: (d) => context.push('/day/${isoDate(d)}'),
                 ),
               ),
@@ -295,43 +304,179 @@ class _CalendarCell extends StatelessWidget {
 
 // ── Day list ─────────────────────────────────────────────────────────────────
 
-class _DayList extends StatelessWidget {
+/// Groups sorted-desc days into per-month sections, preserving order.
+/// Pure (no widgets) so it can be unit-tested directly.
+List<({DateTime month, List<DateTime> days})> groupDaysByMonth(
+  List<DateTime> days,
+) {
+  final groups = <({DateTime month, List<DateTime> days})>[];
+  for (final d in days) {
+    final month = DateTime(d.year, d.month);
+    if (groups.isEmpty || groups.last.month != month) {
+      groups.add((month: month, days: [d]));
+    } else {
+      groups.last.days.add(d);
+    }
+  }
+  return groups;
+}
+
+class _DayList extends StatefulWidget {
   const _DayList({
     required this.days,
     required this.today,
     required this.onTapDay,
-    this.showEmptyHint = false,
   });
 
+  /// Always non-empty: the caller includes today even with no transactions.
   final List<DateTime> days;
   final DateTime today;
   final ValueChanged<DateTime> onTapDay;
-  final bool showEmptyHint;
+
+  @override
+  State<_DayList> createState() => _DayListState();
+}
+
+class _DayListState extends State<_DayList> {
+  final _listKey = GlobalKey();
+  final _headerKeys = <DateTime, GlobalKey>{};
+  DateTime? _visibleMonth;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      itemCount: days.length + (showEmptyHint ? 1 : 0),
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        if (showEmptyHint && index == days.length) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 24),
-              child: Text(
-                AppLocalizations.of(context).noTransactions,
-                style: TextStyle(color: context.pal.textMuted),
-              ),
-            ),
-          );
-        }
+    if (widget.days.isEmpty) return const SizedBox.shrink();
+    final groups = groupDaysByMonth(widget.days);
+    _headerKeys.removeWhere((month, _) => !groups.any((g) => g.month == month));
+    for (final g in groups) {
+      _headerKeys.putIfAbsent(g.month, GlobalKey.new);
+    }
+    final visible = _visibleMonth;
+    if (visible == null || !_headerKeys.containsKey(visible)) {
+      _visibleMonth = groups.first.month;
+    }
+    // Re-sync after layout settles (e.g. new transactions shifted rows).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncMonth(groups));
 
-        final day = days[index];
-        return day == today
-            ? _HeroTodayTile(day: day, onTap: () => onTapDay(day))
-            : _DayRow(day: day, onTap: () => onTapDay(day));
-      },
+    return Column(
+      children: [
+        // The one and only pinned header: shows the month at the top of
+        // the viewport. Inline labels below scroll away normally.
+        Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: _MonthLabel(month: _visibleMonth!),
+        ),
+        Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              if (n.depth == 0 &&
+                  (n is ScrollUpdateNotification ||
+                      n is ScrollEndNotification)) {
+                _syncMonth(groups);
+              }
+              return false;
+            },
+            child: CustomScrollView(
+              key: _listKey,
+              slivers: [
+                for (var i = 0; i < groups.length; i++) ...[
+                  // No inline label for the top group: it would sit directly
+                  // under the fixed header showing the same month.
+                  if (i > 0)
+                    SliverToBoxAdapter(
+                      child: Container(
+                        key: _headerKeys[groups[i].month],
+                        child: _MonthLabel(month: groups[i].month),
+                      ),
+                    ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    sliver: SliverList.separated(
+                      itemCount: groups[i].days.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final day = groups[i].days[index];
+                        return day == widget.today
+                            ? _HeroTodayTile(
+                                day: day,
+                                onTap: () => widget.onTapDay(day),
+                              )
+                            : _DayRow(
+                                day: day,
+                                onTap: () => widget.onTapDay(day),
+                              );
+                      },
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Points [_visibleMonth] at the last month whose inline header has fully
+  /// slid under the fixed header. Waiting for the full height (instead of
+  /// first touch) means the fixed header never shows the same month as a
+  /// still-visible inline label. No-ops (no rebuild) when unchanged.
+  void _syncMonth(List<({DateTime month, List<DateTime> days})> groups) {
+    if (!mounted || groups.isEmpty) return;
+    final listBox = _listKey.currentContext?.findRenderObject() as RenderBox?;
+    if (listBox == null || !listBox.attached) return;
+    final top = listBox.localToGlobal(Offset.zero).dy;
+    var current = groups.first.month;
+    for (final g in groups) {
+      final box =
+          _headerKeys[g.month]?.currentContext?.findRenderObject()
+              as RenderBox?;
+      // No box for the top group (its inline label is omitted) or not
+      // laid out yet — neither affects the outcome.
+      if (box == null || !box.attached) continue;
+      if (box.localToGlobal(Offset.zero).dy + box.size.height <= top + 1) {
+        current = g.month;
+      } else {
+        break;
+      }
+    }
+    if (current != _visibleMonth) {
+      setState(() => _visibleMonth = current);
+    }
+  }
+}
+
+// ── Month label (fixed header + inline) ───────────────────────────────────────
+
+class _MonthLabel extends StatelessWidget {
+  const _MonthLabel({required this.month});
+
+  final DateTime month;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pal;
+    final locale = Localizations.localeOf(context).languageCode;
+    final label = intl.DateFormat.yMMMM(locale).format(month);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            locale == 'ar' ? label : label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: .center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              letterSpacing: locale == 'ar' ? null : 0.6,
+              color: pal.textMuted,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -561,51 +706,55 @@ class _DayRow extends StatelessWidget {
       day,
     ); // net, already signed
 
-    return Material(
-      color: pal.surfaceHigh,
-      borderRadius: BorderRadius.circular(kRadius),
-      child: InkWell(
+    return Semantics(
+      button: true,
+      label: '$label, ${formatMoneyMap(totals)}',
+      child: Material(
+        color: pal.surfaceHigh,
         borderRadius: BorderRadius.circular(kRadius),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(kRadius),
-            border: Border.all(color: pal.border),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: pal.text,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(kRadius),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(kRadius),
+              border: Border.all(color: pal.border),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: pal.text,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              SignedMoneyText(
-                totals,
-                multiline: true,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: pal.text,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                SignedMoneyText(
+                  totals,
+                  multiline: true,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: pal.text,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                  positiveColor: pal.income,
+                  negativeColor: pal.expense,
                 ),
-                positiveColor: pal.income,
-                negativeColor: pal.expense,
-              ),
-              const SizedBox(width: 6),
-              Icon(Icons.chevron_right, size: 18, color: pal.textMuted),
-            ],
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right, size: 18, color: pal.textMuted),
+              ],
+            ),
           ),
         ),
       ),

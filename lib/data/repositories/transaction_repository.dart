@@ -6,6 +6,7 @@ abstract class TransactionRepository {
   Future<int> update(TransactionModel t);
   Future<int> delete(int id);
   Future<int> deleteAll();
+  Future<int> deleteByDay(DateTime day, {TransactionType? type});
   Future<List<TransactionModel>> getAll();
   Future<List<String>> getPayeeSuggestions({String? query, int limit = 5});
 }
@@ -28,6 +29,22 @@ class SqfliteTransactionRepository implements TransactionRepository {
 
   @override
   Future<int> deleteAll() => _db.delete('transactions');
+
+  @override
+  Future<int> deleteByDay(DateTime day, {TransactionType? type}) {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    final where = StringBuffer('date >= ? AND date < ?');
+    final args = <Object?>[
+      start.millisecondsSinceEpoch,
+      end.millisecondsSinceEpoch,
+    ];
+    if (type != null) {
+      where.write(' AND type = ?');
+      args.add(type.value);
+    }
+    return _db.delete('transactions', where: where.toString(), whereArgs: args);
+  }
 
   @override
   Future<List<TransactionModel>> getAll() async {

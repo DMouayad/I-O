@@ -200,6 +200,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
 // ── Currency Totals & Trend Card ─────────────────────────────────────────────
 
+// ── Currency Totals & Trend Card ─────────────────────────────────────────────
+
 class _ModernTotalsCard extends StatelessWidget {
   const _ModernTotalsCard({
     required this.currency,
@@ -215,10 +217,7 @@ class _ModernTotalsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final pal = context.pal;
     final l10n = AppLocalizations.of(context);
-    final totalTurnover = totals.income + totals.expense;
-    final incomeRatio = totalTurnover > 0
-        ? (totals.income / totalTurnover)
-        : 0.5;
+    final netColor = totals.net >= 0 ? pal.income : pal.expense;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -231,92 +230,84 @@ class _ModernTotalsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Hero: the one number that matters most.
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                currency,
+                '${totals.net >= 0 ? '+' : '−'}${formatMoney(totals.net.abs(), currency)}',
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  color: pal.text,
-                ),
-              ),
-              Text(
-                '${totals.net >= 0 ? '+' : ''}${formatMoney(totals.net, currency)} ${currencySymbol(currency)}',
-                style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  color: totals.net >= 0 ? pal.income : pal.expense,
+                  color: netColor,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
+              const SizedBox(width: 8),
+              Text(
+                currencySymbol(currency),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                  color: pal.text,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
 
-          // Savings / Flow Distribution Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: SizedBox(
-              height: 6,
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: (incomeRatio * 100).toInt(),
-                    child: Container(color: pal.income),
-                  ),
-                  Expanded(
-                    flex: ((1 - incomeRatio) * 100).toInt(),
-                    child: Container(color: pal.expense),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Metrics row
+          // Secondary: income / expense, scannable at a glance.
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _metric(
+              _flow(
+                pal,
+                Icons.arrow_upward_rounded,
                 l10n.income,
-                '+${formatMoney(totals.income, currency)}',
+                totals.income,
                 pal.income,
               ),
-              _metric(
+              const SizedBox(width: 20),
+              _flow(
+                pal,
+                Icons.arrow_downward_rounded,
                 l10n.expense,
-                '-${formatMoney(totals.expense, currency)}',
+                totals.expense,
                 pal.expense,
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-
-          // Daily Bars
-          _DailyBars(
-            bars: bars,
-            semanticsLabel: '${l10n.income} / ${l10n.expense} $currency',
           ),
         ],
       ),
     );
   }
 
-  Widget _metric(String label, String value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _flow(
+    AppPalette pal,
+    IconData icon,
+    String label,
+    double amount,
+    Color color,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-        ),
-        Text(
-          value,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: pal.textMuted,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          formatMoney(amount, currency),
+          style: TextStyle(
+            fontSize: 13,
             fontWeight: FontWeight.w700,
             color: color,
             fontFeatures: const [FontFeature.tabularFigures()],
@@ -361,11 +352,23 @@ class _VisualPayeesCard extends StatelessWidget {
           ),
           if (topExpense.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _payeeBarSection(context, l10n.expense, topExpense, pal.expense),
+            _payeeBarSection(
+              pal,
+              l10n.expense,
+              topExpense,
+              pal.expense,
+              isExpense: true,
+            ),
           ],
           if (topIncome.isNotEmpty) ...[
             const SizedBox(height: 16),
-            _payeeBarSection(context, l10n.income, topIncome, pal.income),
+            _payeeBarSection(
+              pal,
+              l10n.income,
+              topIncome,
+              pal.income,
+              isExpense: false,
+            ),
           ],
         ],
       ),
@@ -373,15 +376,17 @@ class _VisualPayeesCard extends StatelessWidget {
   }
 
   Widget _payeeBarSection(
-    BuildContext context,
+    AppPalette pal,
     String title,
     List<_PayeeTotal> items,
-    Color accentColor,
-  ) {
-    final pal = context.pal;
-    final maxAmount = items.first.expenseSum > 0
-        ? items.first.expenseSum
-        : items.first.incomeSum;
+    Color accentColor, {
+    required bool isExpense,
+  }) {
+    double amountOf(_PayeeTotal p) => isExpense ? p.expenseSum : p.incomeSum;
+    Map<String, double> byCurrencyOf(_PayeeTotal p) =>
+        isExpense ? p.expenseByCurrency : p.incomeByCurrency;
+
+    final maxAmount = amountOf(items.first);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,35 +400,35 @@ class _VisualPayeesCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        for (final item in items) ...[
+        for (final item in items)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      item.name,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: pal.text,
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: pal.text,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
-                      item.expenseSum > 0
-                          ? formatMoney(
-                              item.expenseSum,
-                              _dominantCurrency(item.expenseByCurrency),
-                            )
-                          : formatMoney(
-                              item.incomeSum,
-                              _dominantCurrency(item.incomeByCurrency),
-                            ),
+                      () {
+                        final cur = _dominantCurrency(byCurrencyOf(item));
+                        return '${formatMoney(amountOf(item), cur)} ${currencySymbol(cur)}';
+                      }(),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
+                        color: pal.text,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -433,12 +438,7 @@ class _VisualPayeesCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(2),
                   child: LinearProgressIndicator(
-                    value: maxAmount > 0
-                        ? ((item.expenseSum > 0
-                                  ? item.expenseSum
-                                  : item.incomeSum) /
-                              maxAmount)
-                        : 0.0,
+                    value: maxAmount > 0 ? amountOf(item) / maxAmount : 0.0,
                     minHeight: 4,
                     backgroundColor: pal.border.withValues(alpha: 0.4),
                     valueColor: AlwaysStoppedAnimation<Color>(accentColor),
@@ -447,82 +447,7 @@ class _VisualPayeesCard extends StatelessWidget {
               ],
             ),
           ),
-        ],
       ],
-    );
-  }
-}
-
-// ── Daily Trend Bars ─────────────────────────────────────────────────────────
-
-class _DailyBars extends StatelessWidget {
-  const _DailyBars({required this.bars, required this.semanticsLabel});
-
-  final List<({double income, double expense})> bars;
-  final String semanticsLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final pal = context.pal;
-    var max = 0.0;
-    for (final b in bars) {
-      if (b.income > max) max = b.income;
-      if (b.expense > max) max = b.expense;
-    }
-    if (max <= 0) return const SizedBox.shrink();
-    const sideH = 28.0;
-
-    return Semantics(
-      label: semanticsLabel,
-      child: SizedBox(
-        height: sideH * 2 + 2,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final b in bars)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 1),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: sideH,
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Container(
-                            height: (b.income / max) * sideH,
-                            decoration: BoxDecoration(
-                              color: pal.income,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(2),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Container(height: 1.5, color: pal.border),
-                      SizedBox(
-                        height: sideH,
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          child: Container(
-                            height: (b.expense / max) * sideH,
-                            decoration: BoxDecoration(
-                              color: pal.expense,
-                              borderRadius: const BorderRadius.vertical(
-                                bottom: Radius.circular(2),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }

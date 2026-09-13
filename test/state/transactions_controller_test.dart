@@ -69,4 +69,81 @@ void main() {
     final added = await controller.seedYearToDate(wipe: false);
     expect(controller.transactions.value.length, first + added);
   });
+
+  test('removeDay deletes one day and restoreAll brings it back', () async {
+    TransactionModel tx(TransactionType type, double amount, DateTime date) =>
+        TransactionModel(
+          type: type,
+          amount: amount,
+          currency: 'USD',
+          date: date,
+          createdAt: date,
+        );
+    final controller = TransactionsController(FakeTransactionRepository());
+    await controller.add(
+      tx(TransactionType.income, 100, DateTime(2024, 5, 13, 9)),
+    );
+    await controller.add(
+      tx(TransactionType.expense, 40, DateTime(2024, 5, 13, 10)),
+    );
+    await controller.add(
+      tx(TransactionType.expense, 7, DateTime(2024, 5, 14, 10)),
+    );
+
+    final snapshot = await controller.removeDay(DateTime(2024, 5, 13));
+    expect(snapshot.length, 2);
+    expect(controller.transactions.value.length, 1);
+    expect(controller.transactions.value.first.amount, 7);
+
+    await controller.restoreAll(snapshot);
+    expect(controller.transactions.value.length, 3);
+  });
+
+  test('removeDay with type removes only that tab slice', () async {
+    final controller = TransactionsController(FakeTransactionRepository());
+    final day = DateTime(2024, 5, 13, 10);
+    await controller.add(
+      TransactionModel(
+        type: TransactionType.income,
+        amount: 100,
+        currency: 'USD',
+        date: day,
+        createdAt: day,
+      ),
+    );
+    await controller.add(
+      TransactionModel(
+        type: TransactionType.expense,
+        amount: 40,
+        currency: 'USD',
+        date: day,
+        createdAt: day,
+      ),
+    );
+
+    final snapshot = await controller.removeDay(
+      DateTime(2024, 5, 13),
+      type: TransactionType.expense,
+    );
+    expect(snapshot.length, 1);
+    expect(controller.transactions.value.length, 1);
+    expect(controller.transactions.value.first.type, TransactionType.income);
+  });
+
+  test('removeDay on an empty day returns empty and changes nothing', () async {
+    final controller = TransactionsController(FakeTransactionRepository());
+    await controller.add(
+      TransactionModel(
+        type: TransactionType.income,
+        amount: 100,
+        currency: 'USD',
+        date: DateTime(2024, 5, 13, 10),
+        createdAt: DateTime(2024, 5, 13, 10),
+      ),
+    );
+
+    final snapshot = await controller.removeDay(DateTime(2024, 5, 14));
+    expect(snapshot, isEmpty);
+    expect(controller.transactions.value.length, 1);
+  });
 }

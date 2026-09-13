@@ -34,6 +34,37 @@ class TransactionsController {
     await load();
   }
 
+  /// Deletes one calendar day (optionally one [type] slice) and returns the
+  /// removed rows so the caller can offer Undo. Day boundaries use the same
+  /// local-midnight convention as the reports grouping.
+  Future<List<TransactionModel>> removeDay(
+    DateTime day, {
+    TransactionType? type,
+  }) async {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    final snapshot = transactions.value
+        .where(
+          (t) =>
+              !t.date.isBefore(start) &&
+              t.date.isBefore(end) &&
+              (type == null || t.type == type),
+        )
+        .toList();
+    if (snapshot.isEmpty) return const [];
+    await _repo.deleteByDay(day, type: type);
+    await load();
+    return snapshot;
+  }
+
+  /// Re-inserts rows previously removed by [removeDay] (single refresh).
+  Future<void> restoreAll(List<TransactionModel> snapshot) async {
+    for (final t in snapshot) {
+      await _repo.insert(t);
+    }
+    await load();
+  }
+
   /// Dev-only: replaces (or appends to) all transactions with generated
   /// demo data for the current year. Returns the inserted count.
   Future<int> seedYearToDate({int seed = 42, bool wipe = true}) async {

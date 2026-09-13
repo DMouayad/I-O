@@ -254,6 +254,36 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get delete;
 
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @deleteDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete day…'**
+  String get deleteDay;
+
+  /// No description provided for @deleteDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete transactions?'**
+  String get deleteDayTitle;
+
+  /// No description provided for @deleteScopeDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Whole day'**
+  String get deleteScopeDay;
+
+  /// No description provided for @deletedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted {count} transactions'**
+  String deletedCount(int count);
+
   /// No description provided for @deletedWithAmount.
   ///
   /// In en, this message translates to:
